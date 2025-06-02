@@ -1,18 +1,24 @@
-# Required dependencies to run Cisco Meraki CLU
-tabulate
 pathlib
 datetime
 termcolor
 requests
-rich
-setuptools
-cryptography
-dnspython
-ipinfo
-scapy
-numpy
 ipaddress
 flask>=2.0.1
 certifi>=2023.11.17
 pyOpenSSL>=23.3.0
-meraki>=1.54.0  # Official Meraki Dashboard API Python SDK
+meraki>=1.54.0
+flask==2.3.3
+gunicorn==21.2.0
+requests==2.31.0
+python-dotenv==1.0.0
+click==8.1.7
+tabulate==0.9.0
+termcolor==2.3.0
+sqlcipher3-wheels
+rich==13.7.0
+setuptools==69.0.3
+dnspython==2.4.2
+ipinfo==4.4.2
+scapy==2.5.0
+numpy==1.26.4
+cryptography

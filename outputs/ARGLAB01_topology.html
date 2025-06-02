@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Topology: ARGLAB01</title>
+    <meta charset="utf-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet" type="text/css">
+    <style type="text/css">
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+        }
+        #topology-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        #topology-header {
+            background-color: #2d2d2d;
+            color: #ffffff;
+            padding: 10px 20px;
+            border-bottom: 1px solid #3d3d3d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #topology-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        #topology-stats {
+            font-size: 14px;
+        }
+        #topology-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        #topology-sidebar {
+            width: 250px;
+            background-color: #252525;
+            padding: 15px;
+            overflow-y: auto;
+            border-right: 1px solid #3d3d3d;
+        }
+        #topology-network {
+            flex: 1;
+            position: relative;
+        }
+        .legend {
+            margin-bottom: 20px;
+        }
+        .legend h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #ffffff;
+            border-bottom: 1px solid #3d3d3d;
+            padding-bottom: 5px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .legend-dash {
+            width: 20px;
+            height: 0;
+            border-top: 2px dashed;
+            margin-right: 8px;
+        }
+        .device-count {
+            margin-top: 20px;
+        }
+        .device-count h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #ffffff;
+            border-bottom: 1px solid #3d3d3d;
+            padding-bottom: 5px;
+        }
+        .device-type {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        .controls h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #ffffff;
+            border-bottom: 1px solid #3d3d3d;
+            padding-bottom: 5px;
+        }
+        .control-button {
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+        }
+        .control-button:hover {
+            background-color: #106ebe;
+        }
+        .vis-network {
+            background-color: #121212;
+        }
+        .vis-tooltip {
+            background-color: #2d2d2d !important;
+            color: #e0e0e0 !important;
+            border: 1px solid #3d3d3d !important;
+            border-radius: 4px !important;
+            padding: 10px !important;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5) !important;
+            max-width: 300px !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="topology-container">
+        <div id="topology-header">
+            <div id="topology-title">Network Topology: ARGLAB01</div>
+            <div id="topology-stats">
+                Devices: 3 | 
+                Clients: 13 | 
+                Connections: 13
+            </div>
+        </div>
+        <div id="topology-content">
+            <div id="topology-sidebar">
+                <div class="legend">
+                    <h3>Connection Types</h3>
+
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #607D8B;"></div>
+                        <span>Wired Client</span>
+                    </div>
+                </div>
+                <div class="legend">
+                    <h3>Device Types</h3>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #4CAF50;"></div>
+                        <span>appliance</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #4CAF50;"></div>
+                        <span>unknown</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #4CAF50;"></div>
+                        <span>switch</span>
+                    </div>
+                </div>
+                <div class="legend">
+                    <h3>Client Types</h3>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #2196F3;"></div>
+                        <span>client</span>
+                    </div>
+                </div>
+                <div class="device-count">
+                    <h3>Device Count</h3>
+                    <div class="device-type">
+                        <span>switch</span>
+                        <span>1</span>
+                    </div>
+                    <div class="device-type">
+                        <span>unknown</span>
+                        <span>1</span>
+                    </div>
+                    <div class="device-type">
+                        <span>appliance</span>
+                        <span>1</span>
+                    </div>
+                    <div class="device-type">
+                        <span>client</span>
+                        <span>13</span>
+                    </div>
+                </div>
+                <div class="controls">
+                    <h3>Controls</h3>
+                    <button class="control-button" onclick="fitNetwork()">Fit All Nodes</button>
+                    <button class="control-button" onclick="togglePhysics()">Toggle Physics</button>
+                    <button class="control-button" onclick="toggleEdgeLabels()">Toggle Edge Labels</button>
+                    <button class="control-button" onclick="toggleNodeLabels()">Toggle Node Labels</button>
+                </div>
+            </div>
+            <div id="topology-network"></div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        // Create a network
+        var container = document.getElementById('topology-network');
+        
+        // Parse the JSON data
+        var nodes = new vis.DataSet([{"id": "Q4AF-UE4A-6QNM", "label": "ARGLAB01-SW", "title": "<b>Unknown</b><br>\n<b>Model:</b> MS120-48<br>\n<b>Type:</b> MS Switch<br>\n<b>IP:</b> 10.215.110.2<br>\n<b>MAC:</b> cc:9c:3e:a0:da:96<br>\n<b>Status:</b> Unknown<br>\n<b>Serial:</b> Q4AF-UE4A-6QNM", "shape": "circularImage", "image": "https://img.icons8.com/material/48/settings_ethernet.png", "group": "switch", "size": 30, "font": {"size": 14}}, {"id": "Q5BE-UCLQ-2Q7V", "label": "ARGLAB01-AP01", "title": "<b>ARGLAB01-AP01</b><br>\n<b>Model:</b> CW9172I<br>\n<b>Type:</b> unknown<br>\n<b>IP:</b> 10.215.110.15<br>\n<b>MAC:</b> 8c:88:81:57:2a:00<br>\n<b>Status:</b> Unknown", "shape": "circularImage", "image": "https://img.icons8.com/material/48/device_unknown.png", "group": "unknown", "size": 30, "font": {"size": 14}}, {"id": "Q2FY-PYLD-NWHN", "label": "ARGLAB01-MX", "title": "<b>Unknown</b><br>\n<b>Model:</b> MX67<br>\n<b>Type:</b> MX Security Appliance<br>\n<b>IP:</b> Unknown<br>\n<b>MAC:</b> 00:84:1e:8e:ae:69<br>\n<b>Status:</b> Unknown<br>\n<b>Serial:</b> Q2FY-PYLD-NWHN", "shape": "circularImage", "image": "https://img.icons8.com/material/48/security.png", "group": "appliance", "size": 30, "font": {"size": 14}}, {"id": "k662123", "label": "BROTHER-TST", "title": "<b>BROTHER-TST</b><br>\n<b>Type:</b> unknown<br>\n<b>IP:</b> 10.207.110.17<br>\n<b>MAC:</b> 14:b3:1f:20:02:9f<br>\n<b>VLAN:</b> 100<br>\n<b>Status:</b> Online<br>\n<b>Connected to:</b> ARGLAB01-SW<br>\n<b>Switchport:</b> 2<br><b>Last Seen:</b> 2025-05-29T15:49:52Z", "shape": "circularImage", "image": "https://img.icons8.com/material/48/device_unknown.png", "group": "client", "size": 20, "font": {"size": 12}}, {"id": "k72a5ac", "label": "PB99995-P04", "title": "<b>PB99995-P04</b><br>\n<b>Type:</b> unknown<br>\n<b>IP:</b> 10.207.110.14<br>\n<b>MAC:</b> 18:60:24:6a:3b:22<br>\n<b>VLAN:</b> 100<br>\n<b>Status:</b> Online<br>\n<b>Connected to:</b> ARGLAB01-SW<br>\n<b>Switchport:</b> 3<br><b>Last Seen:</b> 2025-05-29T15:49:52Z", "shape": "circularImage", "image": "https://img.icons8.com/material/48/device_unknown.png", "group": "client", "size": 20, "font": {"size": 12}}, {"id": "k7de228", "label": "minint-d5l1l8k", "title": "<b>minint-d5l1l8k</b><br>\n<b>Type:</b> unknown<br>\n<b>IP:</b> 10.207.110.11<br>\n<b>MAC:</b> 5c:28:86:56:a1:21<br>\n<b>VLAN:</b> 100<br>\n<b>Status:</b> Online<br>\n<b>Connected to:</b> ARGLAB01-SW<br>\n<b>Switchport:</b> 1<br><b>Last Seen:</b> 2025-05-29T15:49:52Z", "shape": "circularImage", "image": "https://img.icons8.com/material/48/device_unknown.png", "group": "client", "size": 20, "font": {"size": 12}}, {"id": "k95f7a0", "label": null, "title": "<b>None</b><br>\n<b>Type:</b> unknown<br>\n<b>IP:</b> 10.207.110.175<br>\n<b>MAC:</b> 1c:69:7a:08:48:9d<br>\n<b>VLAN:</b> 150<br>\n<b>Status:</b> Online<br>\n<b>Connected to:</b> ARGLAB01-SW<br>\n<b>Switchport:</b> 23<br><b>Last Seen:</b> 2025-05-29T15:49:52Z", "shape": "circularImage", "image": "https://img.icons8.com/material/48/device_unknown.png", "group": "client", "size": 20, "font": {"size": 12}}, {"id": "k97a853", "label": "PB99995-K23", "title": "<b>PB99995-K23</b><br>\n<b>Type:</b> unknown<br>\n<b>IP:</b> 10.207.110.23<br>\n<b>MAC:</b> 50:81:40:94:ee:6f<br>\n<b>VLAN:</b> 100<br>\n<b>Status:</b> Online<br>\n<b>Connected to:</b> ARGLAB01-SW<br>\n<b>Switchport:</b> 7<br><b>Last Seen:</b> 2025-05-29T15:49:52Z", "shape": "circularImage", "image": "https://img.icons8.com/material/48/device_unknown.png", "group": "client", "size": 20, "font": {"size": 12}}, {"id": "k1054ab", "label": "PB99995-P03", "title": "<b>PB99995-P03</b><br>\n<b>Type:</b> unknown<br>\n<b>IP:</b> 10.207.110.13<br>\n<b>MAC:</b> 7c:d3:0a:32:da:a7<br>\n<b>VLAN:</b> 100<br>\n<b>Status:</b> Online<br>\n<b>Connected to:</b> ARGLAB01-SW<br>\n<b>Switchport:</b> 4<br><b>Last Seen:</b> 2025-05-29T15:49:52Z", "shape": "circularImage", "image": "https://img.icons8.com/material/48/device_unknown.png", "group": "client", "size": 20, "font": {"size": 12}}, {"id": "k11e5e1", "label": "PB99995-K25", "title": "<b>PB99995-K25</b><br>\n<b>Type:</b> unknown<br>\n<b>IP:</b> 10.207.110.25<br>\n<b>MAC:</b> 50:81:40:94:ee:69<br>\n<b>VLAN:</b> 100<br>\n<b>Status:</b> Online<br>\n<b>Connected to:</b> ARGLAB01-SW<br>\n<b>Switchport:</b> 9<br><b>Last Seen:</b> 2025-05-29T15:49:52Z", "shape": "circularImage", "image": "https://img.icons8.com/material/48/device_unknown.png", "group": "client", "size": 20, "font": {"size": 12}}, {"id": "ke6e26e", "label": "PB99995-K22", "title": "<b>PB99995-K22</b><br>\n<b>Type:</b> unknown<br>\n<b>IP:</b> 10.207.110.22<br>\n<b>MAC:</b> c8:5a:cf:a9:81:6a<br>\n<b>VLAN:</b> 100<br>\n<b>Status:</b> Online<br>\n<b>Connected to:</b> ARGLAB01-SW<br>\n<b>Switchport:</b> 6<br><b>Last Seen:</b> 2025-05-29T15:49:52Z", "shape": "circularImage", "image": "https://img.icons8.com/material/48/device_unknown.png", "group": "client", "size": 20, "font": {"size": 12}}, {"id": "ked22a3", "label": "PB99995-DTT", "title": "<b>PB99995-DTT</b><br>\n<b>Type:</b> unknown<br>\n<b>IP:</b> 10.215.110.30<br>\n<b>MAC:</b> 00:10:f3:9f:5f:7c<br>\n<b>VLAN:</b> 10<br>\n<b>Status:</b> Online<br>\n<b>Connected to:</b> ARGLAB01-SW<br>\n<b>Switchport:</b> 21<br><b>Last Seen:</b> 2025-05-29T15:48:51Z", "shape": "circularImage", "image": "https://img.icons8.com/material/48/device_unknown.png", "group": "client", "size": 20, "font": {"size": 12}}, {"id": "k2c7a33", "label": null, "title": "<b>None</b><br>\n<b>Type:</b> unknown<br>\n<b>IP:</b> 10.207.110.176<br>\n<b>MAC:</b> 1c:69:7a:08:47:6b<br>\n<b>VLAN:</b> 150<br>\n<b>Status:</b> Online<br>\n<b>Connected to:</b> ARGLAB01-SW<br>\n<b>Switchport:</b> 24<br><b>Last Seen:</b> 2025-05-29T15:49:52Z", "shape": "circularImage", "image": "https://img.icons8.com/material/48/device_unknown.png", "group": "client", "size": 20, "font": {"size": 12}}, {"id": "k2c8fcf", "label": "PB99995-K21", "title": "<b>PB99995-K21</b><br>\n<b>Type:</b> unknown<br>\n<b>IP:</b> 10.207.110.21<br>\n<b>MAC:</b> e0:70:ea:a4:c4:ce<br>\n<b>VLAN:</b> 100<br>\n<b>Status:</b> Online<br>\n<b>Connected to:</b> ARGLAB01-SW<br>\n<b>Switchport:</b> 5<br><b>Last Seen:</b> 2025-05-29T15:49:52Z", "shape": "circularImage", "image": "https://img.icons8.com/material/48/device_unknown.png", "group": "client", "size": 20, "font": {"size": 12}}, {"id": "k0829b5", "label": "PB99995-K26", "title": "<b>PB99995-K26</b><br>\n<b>Type:</b> unknown<br>\n<b>IP:</b> 10.207.110.26<br>\n<b>MAC:</b> 50:81:40:94:33:96<br>\n<b>VLAN:</b> 100<br>\n<b>Status:</b> Online<br>\n<b>Connected to:</b> ARGLAB01-SW<br>\n<b>Switchport:</b> 10<br><b>Last Seen:</b> 2025-05-29T15:49:52Z", "shape": "circularImage", "image": "https://img.icons8.com/material/48/device_unknown.png", "group": "client", "size": 20, "font": {"size": 12}}, {"id": "k5f3aea", "label": "PB99995-K24", "title": "<b>PB99995-K24</b><br>\n<b>Type:</b> unknown<br>\n<b>IP:</b> 10.207.110.24<br>\n<b>MAC:</b> 50:81:40:94:ed:c3<br>\n<b>VLAN:</b> 100<br>\n<b>Status:</b> Online<br>\n<b>Connected to:</b> ARGLAB01-SW<br>\n<b>Switchport:</b> 8<br><b>Last Seen:</b> 2025-05-29T15:49:52Z", "shape": "circularImage", "image": "https://img.icons8.com/material/48/device_unknown.png", "group": "client", "size": 20, "font": {"size": 12}}]);
+        var edges = new vis.DataSet([{"from": "k662123", "to": "Q4AF-UE4A-6QNM", "label": "Port 2", "title": "Port 2", "color": {"color": "#607D8B", "highlight": "#607D8B"}, "width": 1, "dashes": false, "arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}, {"from": "k72a5ac", "to": "Q4AF-UE4A-6QNM", "label": "Port 3", "title": "Port 3", "color": {"color": "#607D8B", "highlight": "#607D8B"}, "width": 1, "dashes": false, "arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}, {"from": "k7de228", "to": "Q4AF-UE4A-6QNM", "label": "Port 1", "title": "Port 1", "color": {"color": "#607D8B", "highlight": "#607D8B"}, "width": 1, "dashes": false, "arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}, {"from": "k95f7a0", "to": "Q4AF-UE4A-6QNM", "label": "Port 23", "title": "Port 23", "color": {"color": "#607D8B", "highlight": "#607D8B"}, "width": 1, "dashes": false, "arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}, {"from": "k97a853", "to": "Q4AF-UE4A-6QNM", "label": "Port 7", "title": "Port 7", "color": {"color": "#607D8B", "highlight": "#607D8B"}, "width": 1, "dashes": false, "arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}, {"from": "k1054ab", "to": "Q4AF-UE4A-6QNM", "label": "Port 4", "title": "Port 4", "color": {"color": "#607D8B", "highlight": "#607D8B"}, "width": 1, "dashes": false, "arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}, {"from": "k11e5e1", "to": "Q4AF-UE4A-6QNM", "label": "Port 9", "title": "Port 9", "color": {"color": "#607D8B", "highlight": "#607D8B"}, "width": 1, "dashes": false, "arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}, {"from": "ke6e26e", "to": "Q4AF-UE4A-6QNM", "label": "Port 6", "title": "Port 6", "color": {"color": "#607D8B", "highlight": "#607D8B"}, "width": 1, "dashes": false, "arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}, {"from": "ked22a3", "to": "Q4AF-UE4A-6QNM", "label": "Port 21", "title": "Port 21", "color": {"color": "#607D8B", "highlight": "#607D8B"}, "width": 1, "dashes": false, "arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}, {"from": "k2c7a33", "to": "Q4AF-UE4A-6QNM", "label": "Port 24", "title": "Port 24", "color": {"color": "#607D8B", "highlight": "#607D8B"}, "width": 1, "dashes": false, "arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}, {"from": "k2c8fcf", "to": "Q4AF-UE4A-6QNM", "label": "Port 5", "title": "Port 5", "color": {"color": "#607D8B", "highlight": "#607D8B"}, "width": 1, "dashes": false, "arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}, {"from": "k0829b5", "to": "Q4AF-UE4A-6QNM", "label": "Port 10", "title": "Port 10", "color": {"color": "#607D8B", "highlight": "#607D8B"}, "width": 1, "dashes": false, "arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}, {"from": "k5f3aea", "to": "Q4AF-UE4A-6QNM", "label": "Port 8", "title": "Port 8", "color": {"color": "#607D8B", "highlight": "#607D8B"}, "width": 1, "dashes": false, "arrows": {"to": {"enabled": true}}, "font": {"size": 10, "align": "middle"}}]);
+        
+        // Provide the data in the vis format
+        var data = {
+            nodes: nodes,
+            edges: edges
+        };
+        
+        // Options for the network visualization
+        var options = {
+            nodes: {
+                shape: 'circularImage',
+                font: {
+                    color: '#ffffff',
+                    strokeWidth: 3,
+                    strokeColor: '#121212'
+                },
+                shadow: {
+                    enabled: true,
+                    color: 'rgba(0,0,0,0.5)',
+                    size: 10,
+                    x: 5,
+                    y: 5
+                }
+            },
+            edges: {
+                font: {
+                    color: '#ffffff',
+                    strokeWidth: 3,
+                    strokeColor: '#121212',
+                    size: 12
+                },
+                shadow: {
+                    enabled: true,
+                    color: 'rgba(0,0,0,0.5)',
+                    size: 10,
+                    x: 5,
+                    y: 5
+                }
+            },
+            physics: {
+                enabled: true,
+                barnesHut: {
+                    gravitationalConstant: -3000,
+                    centralGravity: 0.3,
+                    springLength: 200,
+                    springConstant: 0.05,
+                    damping: 0.09
+                },
+                stabilization: {
+                    enabled: true,
+                    iterations: 1000,
+                    updateInterval: 100
+                }
+            },
+            interaction: {
+                navigationButtons: true,
+                keyboard: true,
+                tooltipDelay: 200,
+                hover: true
+            },
+            groups: {
+                switch: {
+                    color: {
+                        background: '#4CAF50',
+                        border: '#2E7D32',
+                        highlight: {
+                            background: '#81C784',
+                            border: '#4CAF50'
+                        }
+                    }
+                },
+                wireless: {
+                    color: {
+                        background: '#FF9800',
+                        border: '#F57C00',
+                        highlight: {
+                            background: '#FFB74D',
+                            border: '#FF9800'
+                        }
+                    }
+                },
+                appliance: {
+                    color: {
+                        background: '#9C27B0',
+                        border: '#7B1FA2',
+                        highlight: {
+                            background: '#BA68C8',
+                            border: '#9C27B0'
+                        }
+                    }
+                },
+                client: {
+                    color: {
+                        background: '#2196F3',
+                        border: '#1976D2',
+                        highlight: {
+                            background: '#64B5F6',
+                            border: '#2196F3'
+                        }
+                    }
+                },
+                unknown: {
+                    color: {
+                        background: '#9E9E9E',
+                        border: '#616161',
+                        highlight: {
+                            background: '#BDBDBD',
+                            border: '#9E9E9E'
+                        }
+                    }
+                }
+            }
+        };
+        
+        // Initialize the network
+        var network = new vis.Network(container, data, options);
+        
+        // Add event listeners
+        network.on("stabilizationProgress", function(params) {
+            // Update loading bar
+            console.log("Stabilization progress:", params.iterations, "/", params.total);
+        });
+        
+        network.on("stabilizationIterationsDone", function() {
+            console.log("Stabilization complete");
+        });
+        
+        // Control functions
+        function fitNetwork() {
+            network.fit({
+                animation: {
+                    duration: 1000,
+                    easingFunction: "easeInOutQuad"
+                }
+            });
+        }
+        
+        var physicsEnabled = true;
+        function togglePhysics() {
+            physicsEnabled = !physicsEnabled;
+            network.setOptions({physics: {enabled: physicsEnabled}});
+        }
+        
+        var edgeLabelsVisible = true;
+        function toggleEdgeLabels() {
+            edgeLabelsVisible = !edgeLabelsVisible;
+            edges.forEach(function(edge) {
+                if (edgeLabelsVisible) {
+                    if (edge._originalLabel) {
+                        edges.update({id: edge.id, label: edge._originalLabel});
+                    }
+                } else {
+                    if (edge.label) {
+                        edge._originalLabel = edge.label;
+                        edges.update({id: edge.id, label: ""});
+                    }
+                }
+            });
+        }
+        
+        var nodeLabelsVisible = true;
+        function toggleNodeLabels() {
+            nodeLabelsVisible = !nodeLabelsVisible;
+            nodes.forEach(function(node) {
+                if (nodeLabelsVisible) {
+                    if (node._originalLabel) {
+                        nodes.update({id: node.id, label: node._originalLabel});
+                    }
+                } else {
+                    if (node.label) {
+                        node._originalLabel = node.label;
+                        nodes.update({id: node.id, label: ""});
+                    }
+                }
+            });
+        }
+        
+        // Initial fit
+        setTimeout(fitNetwork, 1000);
+    </script>
+</body>
+</html>
