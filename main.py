@@ -49,6 +49,8 @@ from settings import db_creator
 from utilities import submenu
 from settings import term_extra
 from modules.meraki.meraki_sdk_wrapper import MerakiSDKWrapper
+# Import custom API functions for dashboard emulation
+from modules.meraki import meraki_api
 
 # NEW: Import enhanced visualization module
 try:
@@ -446,14 +448,34 @@ def show_visualization_help():
 
 
 def create_custom_dashboard_object(api_key):
-    """Create a mock dashboard object for custom API mode"""
-    # This is a placeholder - you would implement this based on your existing custom API code
-    class MockDashboard:
+    """Create a CustomDashboard object for custom API mode, emulating the Meraki SDK interface"""
+    class CustomDashboard:
         def __init__(self, api_key):
             self.api_key = api_key
-            # Add your custom API implementation here
-    
-    return MockDashboard(api_key)
+            self.organizations = self.Organizations(api_key)
+            self.networks = self.Networks(api_key)
+
+        class Organizations:
+            def __init__(self, api_key):
+                self.api_key = api_key
+            def getOrganizations(self):
+                return meraki_api.get_organizations(self.api_key)
+            def getOrganizationNetworks(self, org_id):
+                return meraki_api.get_organization_networks(self.api_key, org_id)
+
+        class Networks:
+            def __init__(self, api_key):
+                self.api_key = api_key
+            def getNetworkDevices(self, network_id):
+                return meraki_api.get_network_devices(self.api_key, network_id)
+            def getNetworkClients(self, network_id, timespan=86400):
+                return meraki_api.get_network_clients(self.api_key, network_id, timespan)
+            def getNetworkTopology(self, network_id):
+                # If you have a topology function, use it; otherwise, return None
+                if hasattr(meraki_api, 'get_network_topology'):
+                    return meraki_api.get_network_topology(self.api_key, network_id)
+                return None
+    return CustomDashboard(api_key)
 
 
 # ==================================================
