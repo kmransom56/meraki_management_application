@@ -48,18 +48,24 @@ def create_enhanced_visualization(dashboard, network_id, network_name):
         devices = dashboard.networks.getNetworkDevices(network_id)
         # Fetch clients (last day)
         clients = dashboard.networks.getNetworkClients(network_id, timespan=86400)
-        # Optionally, fetch topology links if available
+        # Topology links endpoint is not available in the Meraki API, so skip this call
         links = None
-        try:
-            links = dashboard.networks.getNetworkTopology(network_id)
-        except Exception:
-            links = None
+        # Type checking and logging
+        if isinstance(devices, str) or not isinstance(devices, list):
+            logging.error(f"Expected devices to be a list, got {type(devices)}: {devices}")
+            print("\n❌ Error: Devices data is not in expected format. Check API response and permissions.")
+            return None
+        if isinstance(clients, str) or not isinstance(clients, list):
+            logging.error(f"Expected clients to be a list, got {type(clients)}: {clients}")
+            print("\n❌ Error: Clients data is not in expected format. Check API response and permissions.")
+            return None
         topology_data = build_topology_from_api_data(devices, clients, links)
         topology_data['network_name'] = network_name
         output_path = generate_topology_html(topology_data, network_name)
         return output_path
     except Exception as e:
         logging.error(f"Error in create_enhanced_visualization: {str(e)}")
+        print(f"\n❌ Error in create_enhanced_visualization: {str(e)}")
         return None
 
 def generate_topology_html(topology_data, network_name=None, output_path=None):
@@ -106,6 +112,16 @@ def build_topology_from_api_data(devices, clients, links=None):
     Returns:
         dict: Network topology data with nodes and links
     """
+    # Defensive type checking
+    if isinstance(devices, str) or not isinstance(devices, list):
+        logging.error(f"build_topology_from_api_data: Expected devices to be a list, got {type(devices)}: {devices}")
+        return {'nodes': [], 'links': []}
+    if isinstance(clients, str) or not isinstance(clients, list):
+        logging.error(f"build_topology_from_api_data: Expected clients to be a list, got {type(clients)}: {clients}")
+        return {'nodes': [], 'links': []}
+    if links is not None and (isinstance(links, str) or not isinstance(links, list)):
+        logging.warning(f"build_topology_from_api_data: Links data is not a list, got {type(links)}. Ignoring links.")
+        links = None
     topology = {
         'nodes': [],
         'links': []

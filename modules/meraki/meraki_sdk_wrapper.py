@@ -16,6 +16,11 @@ import platform
 from datetime import datetime
 from termcolor import colored
 
+# --- Zscaler SSL CA bundle logic ---
+ZSCALER_CA_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tools', 'meraki.pem'))
+if os.path.exists(ZSCALER_CA_PATH):
+    os.environ['REQUESTS_CA_BUNDLE'] = ZSCALER_CA_PATH
+
 # Try to import the Meraki SDK, install if not available
 try:
     import meraki

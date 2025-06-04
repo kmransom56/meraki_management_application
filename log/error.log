@@ -1,0 +1,9 @@
+2025-06-02 09:40:47,032 - ciscomerakiclu - ERROR - An error occurred
+Traceback (most recent call last):
+  File "C:\Users\keith.ransom\Utilities\cisco-meraki-cli\main.py", line 866, in main
+    main_menu(fernet)
+    ~~~~~~~~~^^^^^^^^
+  File "C:\Users\keith.ransom\Utilities\cisco-meraki-cli\main.py", line 544, in main_menu
+    submenu.submenu_appliance(api_key)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'utilities.submenu' has no attribute 'submenu_appliance'

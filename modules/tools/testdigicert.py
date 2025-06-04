@@ -13,6 +13,11 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from modules.meraki import meraki_api
 
+# --- Zscaler SSL CA bundle logic ---
+ZSCALER_CA_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tools', 'meraki.pem'))
+if os.path.exists(ZSCALER_CA_PATH):
+    os.environ['REQUESTS_CA_BUNDLE'] = ZSCALER_CA_PATH
+
 def test_ssl_connection():
     """Test SSL connection to Meraki API using different methods"""
     print(f"Python version: {platform.python_version()}")
