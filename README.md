@@ -126,4 +126,8 @@ The application implements a robust SSL verification strategy:
 
 ## Requirements
 - Python 3.7+
-- See requirements.txt for dependencies# cisco-meraki-clu
+- See requirements.txt for dependencies
+
+## Documentation
+
+All detailed documentation and guides have been moved to the [docs/](docs/) folder for easier navigation and maintenance. See [docs/INDEX.md](docs/INDEX.md) for a full table of contents.
