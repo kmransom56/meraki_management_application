@@ -522,7 +522,14 @@ def open_topology_visualization(html_path):
         bool: True if successful, False otherwise
     """
     try:
-        webbrowser.open(f"file://{html_path}")
+        # Ensure absolute path and correct URI format for Windows
+        abs_path = os.path.abspath(html_path)
+        if os.name == 'nt':
+            # Use three slashes for Windows file URI
+            uri = f"file:///{abs_path.replace('\\', '/')}"
+        else:
+            uri = f"file://{abs_path}"
+        webbrowser.open(uri)
         return True
     except Exception as e:
         logging.error(f"Error opening topology visualization: {str(e)}")
