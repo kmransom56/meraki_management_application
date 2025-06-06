@@ -1569,17 +1569,15 @@ def launch_interactive_cli():
     import platform
     import os
     
-    # Determine the path to main.py
     main_py = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'main.py'))
     
     if platform.system() == 'Windows':
-        # Use start to open a new terminal window
-        subprocess.Popen(["start", "cmd", "/k", f"python \"{main_py}\""], shell=True)
+        # Use PowerShell to open a new window and run main.py
+        command = f'powershell -NoExit -Command "python \"{main_py}\""'
+        subprocess.Popen(["pwsh.exe", "-NoExit", "-Command", f'python \"{main_py}\"'], creationflags=subprocess.CREATE_NEW_CONSOLE)
     elif platform.system() == 'Darwin':
-        # macOS: open a new Terminal window
         subprocess.Popen(["open", "-a", "Terminal", f"python3 '{main_py}'"])
     else:
-        # Linux: open a new terminal emulator (try gnome-terminal, x-terminal-emulator, etc.)
         try:
             subprocess.Popen(["gnome-terminal", "--", "python3", main_py])
         except FileNotFoundError:
