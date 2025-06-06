@@ -1,3 +1,41 @@
+# Cisco Meraki CLI – Quick Start Guide
+
+## For Non-Technical Users
+
+### 1. Unzip the Folder
+- Right-click the zip file and select **Extract All...**
+- Choose a location (e.g., Desktop or Documents).
+
+### 2. Install Python (if not already installed)
+- Download Python 3.12 from: https://www.python.org/downloads/
+- Run the installer and check “Add Python to PATH”.
+- Complete the installation.
+
+### 3. Install Required Packages
+- Open PowerShell in the unzipped folder.
+- Run:
+  ```pwsh
+  pip install -r requirements.txt
+  ```
+
+### 4. Launch the CLI
+- Double-click `start_interactive_cli.ps1` in the folder.
+- If prompted, right-click and select **Run with PowerShell**.
+
+### 5. First Time Setup
+- The CLI will prompt you to create a secure database and enter your Meraki API key.
+
+---
+
+## For Docker Users
+- Open PowerShell or Command Prompt.
+- Run:
+  ```pwsh
+  docker exec -it cisco-meraki-cli-app python main.py
+  ```
+
+---
+
 # Cisco Meraki API Integration Tool
 
 A Python-based tool for interacting with the Cisco Meraki API, featuring:
