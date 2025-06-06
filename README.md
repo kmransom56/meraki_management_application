@@ -32,6 +32,33 @@ A Python-based tool for interacting with the Cisco Meraki API, featuring:
    python main.py
    ```
 
+# Cisco Meraki CLI
+
+## Quick Start: Launch the Interactive CLI
+
+To make it as easy as possible for non-technical users to launch the CLI:
+
+### Windows (Recommended)
+- Double-click `start_interactive_cli.ps1` to open the CLI in a new PowerShell window.
+- Or, right-click and select **Run with PowerShell**.
+
+### Docker Users
+- Open PowerShell or Command Prompt.
+- Run:
+  ```pwsh
+  docker exec -it cisco-meraki-cli-app python main.py
+  ```
+
+### First Time Setup
+- The CLI will prompt you to create a secure database and set your Meraki API key.
+
+---
+
+## Why this is easy
+- No need to open a terminal and type commands—just double-click the script!
+- Works on any Windows system with Python and PowerShell.
+- For Docker, just copy-paste the command above.
+
 ## API Mode Selection
 The application now supports two API modes:
 
