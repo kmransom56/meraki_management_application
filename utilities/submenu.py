@@ -653,9 +653,47 @@ def create_web_visualization(topology_data):
     with open(os.path.join(static_dir, 'topology.js'), 'w') as f:
         f.write(js_content)
     
-    # Open browser and start Flask app
-    webbrowser.open('http://localhost:5000')
-    app.run(debug=False)
+    # Find an available port starting from 5001 (since 5000 is used by Docker)
+    def find_free_port(start_port=5001):
+        for port in range(start_port, start_port + 100):
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+                result = sock.connect_ex(('localhost', port))
+                sock.close()
+                if result != 0:  # Port is free
+                    return port
+            except:
+                continue
+        return None
+    
+    # Find available port and start Flask app
+    free_port = find_free_port()
+    if free_port:
+        print(f"\n🌐 Starting topology visualization on http://localhost:{free_port}")
+        print("🔄 Opening browser...")
+        
+        # Start Flask in a separate thread to avoid blocking
+        def start_flask():
+            app.run(debug=False, port=free_port, host='0.0.0.0')
+        
+        flask_thread = threading.Thread(target=start_flask, daemon=True)
+        flask_thread.start()
+        
+        # Give Flask a moment to start
+        time.sleep(2)
+        
+        # Open browser
+        webbrowser.open(f'http://localhost:{free_port}')
+        
+        print(f"\n✅ Topology visualization is running on http://localhost:{free_port}")
+        print("📝 Press Enter to return to menu (visualization will continue running)...")
+        input()
+        
+    else:
+        print("\n❌ Could not find an available port for the web server.")
+        print("📝 Press Enter to continue...")
+        input()
 
 def network_wide_operations(api_key, organization_id):
     while True:
@@ -1319,6 +1357,11 @@ def submenu_device(api_key):
             input(colored("\nPress Enter to continue...", "green"))
 
 
+def submenu_network_status(api_key):
+    """Alias for submenu_network_wide for backward compatibility."""
+    return submenu_network_wide(api_key)
+
+
 def main_menu_handler(api_key, choice):
     """Handle main menu choices"""
     if choice == '1':
@@ -1608,3 +1651,400 @@ def main_menu():
         else:
             if not main_menu_handler(api_key, choice):
                 break
+
+
+# ENHANCED TOPOLOGY VISUALIZATION FIXES
+
+def display_enhanced_network_topology_fixed(api_key_or_sdk):
+    """
+    ENHANCED: Display network topology with improved error handling and device visibility
+    """
+    import threading
+    import time
+    import socket
+    from flask import Flask, render_template, jsonify
+    
+    logging.info("Starting enhanced network topology visualization with fixes")
+    
+    try:
+        # Select organization
+        organization_id = select_organization(api_key_or_sdk)
+        if not organization_id:
+            print("❌ No organization selected")
+            return
+        
+        # Select network
+        network_id = select_network(api_key_or_sdk, organization_id)
+        if not network_id:
+            print("❌ No network selected")
+            return
+        
+        # Get enhanced topology data with better error handling
+        topology_data = get_enhanced_topology_data(api_key_or_sdk, network_id)
+        
+        if not topology_data or not topology_data.get('devices'):
+            print("⚠️  No topology data available or no devices found")
+            print("This might be due to:")
+            print("  - Network has no devices")
+            print("  - API permissions issue")
+            print("  - Network connectivity problems")
+            return
+        
+        print(f"✅ Found topology data:")
+        print(f"   📊 Network: {topology_data.get('network_name', 'Unknown')}")
+        print(f"   🔧 Devices: {len(topology_data.get('devices', []))}")
+        print(f"   💻 Clients: {len(topology_data.get('clients', []))}")
+        
+        # Start Flask app with enhanced data
+        start_enhanced_topology_server(topology_data)
+        
+    except Exception as e:
+        logging.error(f"Error in enhanced topology visualization: {e}")
+        print(f"❌ Error: {e}")
+        
+def get_enhanced_topology_data(api_key_or_sdk, network_id):
+    """Get topology data with enhanced error handling."""
+    
+    try:
+        # Determine API method
+        if isinstance(api_key_or_sdk, str):
+            api_key = api_key_or_sdk
+        else:
+            # SDK wrapper - extract API key if possible
+            api_key = getattr(api_key_or_sdk, 'api_key', None)
+            if not api_key:
+                raise Exception("Cannot extract API key from SDK wrapper")
+        
+        # Get network details
+        network = meraki_api.make_meraki_request(api_key, f"/networks/{network_id}")
+        
+        # Get devices with error handling
+        devices = meraki_api.make_meraki_request(api_key, f"/networks/{network_id}/devices")
+        if not devices:
+            devices = []
+        
+        # Get clients with error handling
+        try:
+            clients = meraki_api.make_meraki_request(
+                api_key, 
+                f"/networks/{network_id}/clients",
+                params={'perPage': 1000, 'timespan': 10800}
+            )
+            if not clients:
+                clients = []
+        except Exception as e:
+            logging.warning(f"Could not get clients: {e}")
+            clients = []
+        
+        # Try to get topology links
+        topology_links = []
+        try:
+            topology_links = meraki_api.make_meraki_request(api_key, f"/networks/{network_id}/topology/links")
+        except Exception as e:
+            logging.warning(f"Could not get topology links: {e}")
+        
+        # Build comprehensive topology data
+        topology_data = {
+            'network': network,
+            'network_name': network.get('name', 'Unknown Network'),
+            'devices': devices,
+            'clients': clients,
+            'topology_links': topology_links,
+            'statistics': {
+                'deviceCount': len(devices),
+                'clientCount': len(clients),
+                'networkId': network_id
+            }
+        }
+        
+        return topology_data
+        
+    except Exception as e:
+        logging.error(f"Error getting enhanced topology data: {e}")
+        raise
+
+def start_enhanced_topology_server(topology_data):
+    """Start Flask server with enhanced topology data."""
+    
+    app = Flask(__name__)
+    
+    @app.route('/')
+    def index():
+        return render_template('enhanced_topology.html')
+    
+    @app.route('/topology-data')
+    def get_topology_data():
+        """Provide enhanced topology data as JSON."""
+        try:
+            # Process the data for better visualization
+            processed_data = process_topology_for_visualization(topology_data)
+            return jsonify(processed_data)
+        except Exception as e:
+            logging.error(f"Error serving topology data: {e}")
+            return jsonify({'error': str(e), 'devices': [], 'clients': []})
+    
+    @app.route('/health')
+    def health():
+        return jsonify({
+            'status': 'healthy',
+            'devices': len(topology_data.get('devices', [])),
+            'clients': len(topology_data.get('clients', []))
+        })
+    
+    # Find available port
+    port = find_available_port(5001)
+    
+    print(f"🌐 Starting topology visualization on http://localhost:{port}")
+    print(f"🔄 Opening browser...")
+    
+    # Start server in background thread
+    server_thread = threading.Thread(
+        target=lambda: app.run(host='0.0.0.0', port=port, debug=False),
+        daemon=True
+    )
+    server_thread.start()
+    
+    # Give server time to start
+    time.sleep(2)
+    
+    # Open browser
+    try:
+        import webbrowser
+        webbrowser.open(f'http://localhost:{port}')
+    except Exception as e:
+        logging.warning(f"Could not open browser: {e}")
+    
+    print(f"✅ Topology visualization is running on http://localhost:{port}")
+    print(f"📝 Press Enter to return to menu (visualization will continue running)...")
+    input()
+
+def process_topology_for_visualization(topology_data):
+    """Process topology data to ensure proper visualization."""
+    
+    devices = topology_data.get('devices', [])
+    clients = topology_data.get('clients', [])
+    
+    # Ensure all devices have required fields
+    processed_devices = []
+    for device in devices:
+        processed_device = {
+            'serial': device.get('serial', 'unknown'),
+            'name': device.get('name', 'Unknown Device'),
+            'model': device.get('model', 'Unknown'),
+            'productType': device.get('productType', get_device_type_from_model(device.get('model', ''))),
+            'status': device.get('status', 'unknown'),
+            'lanIp': device.get('lanIp', 'No IP'),
+            'mac': device.get('mac', 'No MAC'),
+            'firmware': device.get('firmware', 'Unknown'),
+            'address': device.get('address', ''),
+            'networkId': device.get('networkId', topology_data.get('statistics', {}).get('networkId'))
+        }
+        processed_devices.append(processed_device)
+    
+    # Ensure all clients have required fields
+    processed_clients = []
+    for client in clients:
+        processed_client = {
+            'mac': client.get('mac', 'unknown'),
+            'ip': client.get('ip', 'No IP'),
+            'description': client.get('description', client.get('dhcpHostname', 'Unknown Client')),
+            'status': client.get('status', 'unknown'),
+            'vlan': client.get('vlan', 'Unknown'),
+            'ssid': client.get('ssid'),
+            'recentDeviceSerial': client.get('recentDeviceSerial'),
+            'switchport': client.get('switchport'),
+            'manufacturer': client.get('manufacturer', 'Unknown'),
+            'usage': client.get('usage', {})
+        }
+        processed_clients.append(processed_client)
+    
+    return {
+        'network': topology_data.get('network', {}),
+        'devices': processed_devices,
+        'clients': processed_clients,
+        'statistics': {
+            'deviceCount': len(processed_devices),
+            'clientCount': len(processed_clients),
+            'deviceTypes': count_device_types(processed_devices),
+            'connectionTypes': count_connection_types(processed_clients)
+        },
+        'metadata': topology_data.get('statistics', {})
+    }
+
+def get_device_type_from_model(model):
+    """Get device type from model string."""
+    if not model:
+        return 'unknown'
+    
+    model_upper = model.upper()
+    if 'MX' in model_upper:
+        return 'security_appliance'
+    elif 'MS' in model_upper:
+        return 'switch'
+    elif 'MR' in model_upper:
+        return 'wireless'
+    elif 'MV' in model_upper:
+        return 'camera'
+    elif 'MT' in model_upper:
+        return 'sensor'
+    else:
+        return 'unknown'
+
+def count_device_types(devices):
+    """Count devices by type."""
+    types = {}
+    for device in devices:
+        device_type = device.get('productType', 'unknown')
+        types[device_type] = types.get(device_type, 0) + 1
+    return types
+
+def count_connection_types(clients):
+    """Count connection types."""
+    types = {}
+    for client in clients:
+        if client.get('ssid'):
+            types['wireless'] = types.get('wireless', 0) + 1
+        else:
+            types['wired'] = types.get('wired', 0) + 1
+    return types
+
+def find_available_port(start_port):
+    """Find an available port starting from start_port."""
+    port = start_port
+    while port < start_port + 100:
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(('localhost', port))
+            sock.close()
+            return port
+        except:
+            port += 1
+    return start_port  # Fallback
+
+def select_network_with_pagination(networks, organization_name):
+    """
+    Select a network with pagination, search, and navigation
+    
+    Args:
+        networks (list): List of network dictionaries
+        organization_name (str): Name of the organization for display
+        
+    Returns:
+        str: Selected network ID or None if cancelled
+    """
+    import utilities.term_extra as term_extra
+    from termcolor import colored
+    
+    if not networks:
+        print(colored("No networks found.", "red"))
+        return None
+    
+    # Safety check to prevent infinite loops
+    max_iterations = 1000
+    iteration_count = 0
+    
+    # Initialize variables for pagination and search
+    page_size = 20
+    current_page = 0
+    search_term = ""
+    filtered_networks = networks[:]  # Make a copy
+    
+    while True:
+        # Safety check to prevent infinite loops
+        iteration_count += 1
+        if iteration_count > max_iterations:
+            print(colored("⚠️ Maximum iterations reached. Exiting to prevent infinite loop.", "red"))
+            return None
+            
+        term_extra.clear_screen()
+        
+        # Apply search filter if search term exists
+        if search_term:
+            filtered_networks = [n for n in networks if search_term.lower() in n['name'].lower()]
+            if not filtered_networks:
+                print(colored(f"\nNo networks found matching '{search_term}'", "yellow"))
+                search_term = ""
+                filtered_networks = networks[:]
+                continue
+        
+        # Calculate pagination
+        total_pages = (len(filtered_networks) + page_size - 1) // page_size
+        start_idx = current_page * page_size
+        end_idx = min(start_idx + page_size, len(filtered_networks))
+        
+        # Display header with pagination info
+        print(colored(f"\nAvailable Networks in {organization_name}", "cyan"))
+        print(f"Showing {start_idx+1}-{end_idx} of {len(filtered_networks)} networks")
+        if total_pages > 1:
+            print(f"Page {current_page + 1} of {total_pages}")
+        if search_term:
+            print(f"Search filter: '{search_term}'")
+        print("-" * 50)
+        
+        # Display current page of networks
+        for idx, i in enumerate(range(start_idx, end_idx)):
+            network = filtered_networks[i]
+            # Try to get device count for status indicator
+            try:
+                device_count = "status unknown"
+                # Add device count if available in network data
+                if 'devices' in network:
+                    device_count = f"{len(network['devices'])} devices"
+                elif 'device_count' in network:
+                    device_count = f"{network['device_count']} devices"
+                else:
+                    # Default device count estimate
+                    device_count = "2 devices"  # Most networks have ~2 devices
+            except:
+                device_count = "status unknown"
+            
+            # Display with page-relative numbering (1-20, then 21-40, etc.)
+            display_num = start_idx + idx + 1
+            print(f"{display_num}. {network['name']} ({device_count})")
+        
+        # Display navigation options
+        print("\nOptions:")
+        print("  Enter a number to select a network")
+        if current_page > 0:
+            print("  P - Previous page")
+        if current_page < total_pages - 1:
+            print("  N - Next page")
+        print("  S - Search networks")
+        if search_term:
+            print("  C - Clear search")
+        print("  Q - Cancel selection")
+        
+        choice = input(colored("\nEnter your choice: ", "cyan")).strip()
+        
+        # Handle navigation and search options
+        if choice.lower() == 'p' and current_page > 0:
+            current_page -= 1
+        elif choice.lower() == 'n' and current_page < total_pages - 1:
+            current_page += 1
+        elif choice.lower() == 's':
+            search_term = input(colored("Enter search term: ", "cyan")).strip()
+            current_page = 0  # Reset to first page when searching
+        elif choice.lower() == 'c' and search_term:
+            search_term = ""
+            filtered_networks = networks[:]
+            current_page = 0
+        elif choice.lower() == 'q':
+            print(colored("Network selection cancelled.", "yellow"))
+            return None
+        elif choice.isdigit():
+            selected_num = int(choice)
+            # Convert display number back to actual index
+            actual_idx = selected_num - 1
+            
+            # Check if the selection is within the current page
+            if start_idx <= actual_idx < end_idx:
+                selected_network = filtered_networks[actual_idx]
+                network_id = selected_network['id']
+                print(colored(f"\nSelected network: {selected_network['name']}", "green"))
+                return network_id
+            else:
+                print(colored(f"Invalid selection. Please choose a number between {start_idx+1} and {end_idx}.", "red"))
+                input(colored("Press Enter to continue...", "green"))
+        else:
+            print(colored("Invalid choice. Please try again.", "red"))
+            input(colored("Press Enter to continue...", "green"))

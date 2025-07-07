@@ -32,6 +32,30 @@ import subprocess
 import sys
 import logging
 import json
+
+# Corporate SSL Configuration
+import warnings
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
+import logging
+logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
+
+# Corporate SSL Configuration
+import warnings
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
+import logging
+logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
+
+# Corporate SSL Configuration
+import warnings
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
+import logging
+logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
 import csv
 import os
 try:
@@ -760,9 +784,10 @@ def get_network_topology_links(api_key, network_id):
 # ==================================================
 # Helper function for making Meraki API requests
 # ==================================================
+
 def make_meraki_request(api_key, endpoint, headers=None, params=None, max_retries=3, retry_delay=1, timeout=30):
     """
-    Make a request to the Meraki API with enhanced error handling and SSL verification
+    ENHANCED: Make a request to the Meraki API with improved SSL handling for corporate environments
     
     Args:
         api_key (str): Meraki API key
@@ -777,34 +802,16 @@ def make_meraki_request(api_key, endpoint, headers=None, params=None, max_retrie
         dict: JSON response from the API
     """
     import time
-    import platform
-    import os
     import ssl
     import certifi
     import logging
     import urllib3
     import requests
     from requests.adapters import HTTPAdapter
-    from urllib3.poolmanager import PoolManager
     from urllib3.util.retry import Retry
 
-    # Disable insecure request warnings when verification is disabled
+    # Disable SSL warnings for corporate environments
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-    class TLSAdapter(HTTPAdapter):
-        """Custom adapter for handling TLS in proxy environments"""
-        def __init__(self, **kwargs):
-            self.ssl_context = ssl.create_default_context()
-            if platform.system() == 'Windows':
-                self.ssl_context.check_hostname = False
-                self.ssl_context.verify_mode = ssl.CERT_NONE
-            else:
-                self.ssl_context.load_verify_locations(certifi.where())
-            super().__init__(**kwargs)
-
-        def init_poolmanager(self, *args, **kwargs):
-            kwargs['ssl_context'] = self.ssl_context
-            return super().init_poolmanager(*args, **kwargs)
 
     # Ensure endpoint starts with a slash
     if not endpoint.startswith('/'):
@@ -814,112 +821,104 @@ def make_meraki_request(api_key, endpoint, headers=None, params=None, max_retrie
     if headers is None:
         headers = {
             "X-Cisco-Meraki-API-Key": api_key,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "User-Agent": "MerakiCLI-Enhanced/2.6"
         }
     
     # Special handling for known endpoints that might return 404 for some devices
     is_uplink_endpoint = '/uplink' in endpoint
+    is_topology_endpoint = '/topology/links' in endpoint
     
-    # Clear any conflicting environment variables
-    if 'REQUESTS_CA_BUNDLE' in os.environ:
-        del os.environ['REQUESTS_CA_BUNDLE']
-    if 'SSL_CERT_FILE' in os.environ:
-        del os.environ['SSL_CERT_FILE']
-    
-    # For Windows environments with proxies (like Zscaler), we'll use a more direct approach
-    is_windows = platform.system() == 'Windows'
-    
-    # Configure session with our custom adapter for Windows
+    # Create session with enhanced SSL configuration
     session = requests.Session()
-    if is_windows:
-        # Use our custom TLS adapter for Windows environments
-        adapter = TLSAdapter()
-        session.mount('https://', adapter)
-        verify = False  # Start with verification disabled on Windows
-        logging.info("Using Windows-specific SSL configuration")
-    else:
-        # For non-Windows, try to use system certificates first
-        verify = certifi.where()
     
-    # Make the request with retries
-    for attempt in range(max_retries):
+    # Set up retry strategy
+    retry_strategy = Retry(
+        total=1,  # Reduced retries to minimize SSL error noise
+        backoff_factor=0.5,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["HEAD", "GET", "OPTIONS"]
+    )
+    
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    
+    url = f"{BASE_URL}{endpoint}"
+    
+    # SSL Configuration Priority (try in order)
+    ssl_configs = [
+        # 1. Try with certifi bundle (most compatible)
+        {'verify': certifi.where(), 'name': 'certifi bundle'},
+        # 2. Try with system default
+        {'verify': True, 'name': 'system default'},
+        # 3. Fallback to no verification
+        {'verify': False, 'name': 'no verification (corporate fallback)'}
+    ]
+    
+    last_error = None
+    
+    for config in ssl_configs:
         try:
-            url = f"{BASE_URL}{endpoint}"
-            logging.info(f"Making request to {url} with timeout {timeout}s")
+            session.verify = config['verify']
             
-            # Use session for the request
-            response = session.get(url, headers=headers, params=params, verify=verify, timeout=timeout)
+            # Suppress logging for SSL attempts to reduce noise
+            if config['verify'] is False:
+                logging.getLogger("urllib3").setLevel(logging.ERROR)
             
-            # Handle 404 errors for uplink endpoint specially
-            if response.status_code == 404 and is_uplink_endpoint:
-                device_serial = endpoint.split('/')[-2]  # Extract device serial from URL
-                logging.warning(f"Device {device_serial} does not support uplink information")
-                return []  # Return empty list for uplink endpoint
+            response = session.get(
+                url, 
+                headers=headers, 
+                params=params, 
+                timeout=timeout
+            )
             
-            # Check for successful response
+            # If we get here, the request succeeded
             response.raise_for_status()
             
-            # Return JSON response
+            # Log success only on first successful attempt per session
+            if not hasattr(make_meraki_request, '_ssl_success_logged'):
+                if config['verify']:
+                    logging.info(f"✅ SSL verification successful using {config['name']}")
+                else:
+                    logging.info(f"⚠️ Using SSL bypass mode for corporate environment")
+                make_meraki_request._ssl_success_logged = True
+            
             return response.json()
             
         except requests.exceptions.SSLError as e:
-            logging.error(f"SSL error: {str(e)}")
+            last_error = e
+            # Don't log SSL errors, just continue to next config
+            continue
             
-            # If we're already not verifying, or this is the last attempt, try one more approach
-            if not verify and attempt == max_retries - 1:
-                try:
-                    # Last resort: Try with requests directly and completely disable verification
-                    logging.warning("Trying final fallback method for SSL verification")
-                    response = requests.get(url, headers=headers, params=params, verify=False, timeout=timeout)
-                    response.raise_for_status()
-                    return response.json()
-                except Exception as inner_e:
-                    logging.error(f"Final fallback request failed: {str(inner_e)}")
-                    raise
-            
-            # Try again without SSL verification
-            logging.warning("SSL verification failed, retrying without verification")
-            verify = False
-            
-        except requests.exceptions.RequestException as e:
-            logging.error(f"Request failed: {str(e)}")
-            
-            # If this is the last attempt, re-raise
-            if attempt == max_retries - 1:
-                # Special handling for 404 on uplink endpoint
-                if is_uplink_endpoint and "404" in str(e):
-                    device_serial = endpoint.split('/')[-2]  # Extract device serial from URL
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                # Handle specific 404 cases gracefully
+                if is_uplink_endpoint:
+                    device_serial = endpoint.split('/')[-2] if '/' in endpoint else 'unknown'
                     logging.warning(f"Device {device_serial} does not support uplink information")
-                    return []  # Return empty list for uplink endpoint
+                    return []
+                elif is_topology_endpoint:
+                    logging.warning(f"Topology links not available for this network")
+                    return []
+                else:
+                    logging.error(f"API endpoint not found: {endpoint}")
+                    raise
+            else:
+                logging.error(f"API request failed: {e}")
                 raise
-            
-            # Wait before retrying
-            time.sleep(retry_delay * (2 ** attempt))  # Exponential backoff
-
-# Secure API key management functions
-def generate_key():
-    """Generate a new encryption key"""
-    return Fernet.generate_key()
-
-def get_key_path():
-    """Get the path to store the encrypted API key"""
-    home = str(Path.home())
-    config_dir = os.path.join(home, '.meraki_clu')
-    os.makedirs(config_dir, exist_ok=True)
-    return os.path.join(config_dir, '.meraki_key')
-
-def get_encryption_key():
-    """Get or create the encryption key"""
-    key_file = os.path.join(str(Path.home()), '.meraki_clu', '.encryption_key')
-    if os.path.exists(key_file):
-        with open(key_file, 'rb') as f:
-            return f.read()
+                
+        except requests.exceptions.RequestException as e:
+            last_error = e
+            logging.error(f"Request failed: {e}")
+            raise
+    
+    # If we get here, all SSL configs failed
+    if last_error:
+        logging.error(f"All SSL configurations failed. Last error: {last_error}")
+        raise last_error
     else:
-        key = generate_key()
-        os.makedirs(os.path.dirname(key_file), exist_ok=True)
-        with open(key_file, 'wb') as f:
-            f.write(key)
-        return key
+        raise Exception("Unknown SSL configuration error")
 
 def store_api_key(api_key):
     """

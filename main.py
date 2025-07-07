@@ -43,6 +43,23 @@ from cryptography.fernet import Fernet
 from base64 import urlsafe_b64encode
 from getpass import getpass
 
+# Load environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print(colored("✅ Environment variables loaded from .env file", "green"))
+except ImportError:
+    print(colored("⚠️ python-dotenv not found. Using system environment variables.", "yellow"))
+
+# Apply SSL fixes for corporate environments (Zscaler, Blue Coat, etc.)
+try:
+    import ssl_patch  # Applies SSL fixes automatically
+    print(colored("🔒 SSL fixes applied for corporate environment", "green"))
+except ImportError:
+    print(colored("⚠️ SSL patch not found. SSL issues may occur in corporate environments.", "yellow"))
+except ImportError:
+    print(colored("⚠️ python-dotenv not found. Install with: pip install python-dotenv", "yellow"))
+
 # Import existing modules
 from api import meraki_api_manager
 from settings import db_creator
@@ -71,6 +88,12 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+
+# Reduce SSL-related logging noise in corporate environments
+logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+logging.getLogger("requests.packages.urllib3").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 # Required packages check
@@ -230,24 +253,40 @@ def create_enhanced_network_visualization(api_key, api_mode):
             input(colored("\nPress Enter to continue...", "green"))
             return
         
-        # Select network
-        print(f"\nAvailable Networks in {selected_org['name']}:")
-        for i, network in enumerate(networks, 1):
-            # Get network status indicator
-            try:
-                devices = dashboard.networks.getNetworkDevices(network['id'])
-                device_count = len(devices) if devices else 0
-                status_indicator = f"({device_count} devices)"
-            except:
-                status_indicator = "(status unknown)"
-            
-            print(f"{i}. {network['name']} {status_indicator}")
+        # Select network with pagination
+        print(f"\n📡 Found {len(networks)} networks in {selected_org['name']}")
+        print("🔄 Loading network selection with pagination...")
+        
+        from utilities.submenu import select_network_with_pagination
         
         try:
-            net_choice = int(input(f"\nSelect network [1-{len(networks)}]: ")) - 1
-            selected_network = networks[net_choice]
-        except (ValueError, IndexError):
-            print(colored("Invalid selection.", "red"))
+            print("📋 Starting paginated network selection...")
+            selected_network_id = select_network_with_pagination(networks, selected_org['name'])
+            
+            if not selected_network_id:
+                print(colored("Network selection cancelled.", "yellow"))
+                input(colored("\nPress Enter to continue...", "green"))
+                return
+            
+            print(f"✅ Selected network ID: {selected_network_id}")
+            
+            # Find the selected network object
+            selected_network = None
+            for network in networks:
+                if network['id'] == selected_network_id:
+                    selected_network = network
+                    break
+            
+            if not selected_network:
+                print(colored("Selected network not found.", "red"))
+                input(colored("\nPress Enter to continue...", "green"))
+                return
+                
+            print(f"✅ Selected network object found: {selected_network['name']}")
+                
+        except Exception as e:
+            print(colored(f"Error selecting network: {str(e)}", "red"))
+            print(colored(f"Traceback: {e.__class__.__name__}", "red"))
             input(colored("\nPress Enter to continue...", "green"))
             return
         
@@ -720,9 +759,10 @@ def initialize_api_key():
         if meraki_api_manager.save_api_key(args.set_key, fernet):
             return args.set_key
 
-    # Try to get key from environment variable
-    api_key = os.environ.get('MERAKI_DASHBOARD_API_KEY')
+    # Try to get key from environment variable (check multiple possible names)
+    api_key = os.environ.get('MERAKI_API_KEY') or os.environ.get('MERAKI_DASHBOARD_API_KEY')
     if api_key:
+        print(colored(f"✅ API key loaded from environment variable", "green"))
         return api_key
 
     # Try to load stored key
