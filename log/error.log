@@ -7,3 +7,21 @@ Traceback (most recent call last):
     submenu.submenu_appliance(api_key)
     ^^^^^^^^^^^^^^^^^^^^^^^^^
 AttributeError: module 'utilities.submenu' has no attribute 'submenu_appliance'
+2025-06-19 12:43:04,587 - ciscomerakiclu - ERROR - An error occurred
+Traceback (most recent call last):
+  File "/app/main.py", line 839, in main
+    main_menu(fernet)
+  File "/app/main.py", line 522, in main_menu
+    submenu.submenu_network_status(api_key)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'utilities.submenu' has no attribute 'submenu_network_status'
+2025-06-19 20:53:28,756 - ciscomerakiclu - ERROR - An error occurred
+Traceback (most recent call last):
+  File "/app/main.py", line 839, in main
+    main_menu(fernet)
+  File "/app/main.py", line 533, in main_menu
+    submenu.submenu_sw_and_ap(api_key)
+  File "/app/utilities/submenu.py", line 292, in submenu_sw_and_ap
+    meraki_ms_mr.display_ssid(api_key, network_id)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'modules.meraki.meraki_ms_mr' has no attribute 'display_ssid'

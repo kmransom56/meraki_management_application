@@ -1,39 +1,40 @@
-# Complete requirements for Cisco Meraki CLI Tool
-# Core networking and API packages
-requests>=2.25.0
-flask>=2.0.0
-meraki>=1.40.0
-certifi>=2020.6.20
-urllib3>=1.26.0
+# Complete requirements for Cisco Meraki CLI Tool - Updated January 2025
+# Core networking and API packages (security-updated versions)
+requests>=2.32.0
+flask>=3.0.3
+meraki>=1.47.0
+certifi>=2024.7.4
+urllib3>=2.2.2
+jinja2>=3.1.4
+werkzeug>=3.0.3
 
 # CLI and display packages
-termcolor>=1.1.0
-colorama>=0.4.0
-tabulate>=0.8.0
-click>=7.0
-rich>=10.0.0
-questionary>=1.10.0
-pyfiglet>=0.8.0
-alive-progress>=2.0.0
-prettytable>=2.0.0
+termcolor>=2.0.0
+colorama>=0.4.6
+tabulate>=0.9.0
+click>=8.1.7
+rich>=13.0.0
+questionary>=2.0.0
+pyfiglet>=1.0.0
+alive-progress>=3.0.0
+prettytable>=3.0.0
 
-# Security and encryption
-cryptography>=3.0.0
+# Security and encryption (updated for latest fixes)
+cryptography>=42.0.0
+itsdangerous>=2.2.0
+markupsafe>=2.1.5
 
-# Data analysis and visualization (optional - can be installed separately if needed)
-# pandas>=1.3.0
-# seaborn>=0.11.0
-# matplotlib>=3.3.0
-# pillow>=8.0.0
+# Network utilities (updated versions)
+dnspython>=2.6.0
+ipinfo>=4.4.0
+netaddr>=1.0.0
+validators>=0.24.0
+python-whois>=0.9.0
+speedtest-cli>=2.1.3
+psutil>=5.9.8
 
-# Network utilities
-dnspython>=2.0.0
-ipinfo>=4.0.0
-netaddr>=0.8.0
-validators>=0.18.0
-python-whois>=0.7.0
-speedtest-cli>=2.1.0
-psutil>=5.8.0
+# Additional security packages
+python-dotenv>=1.0.1
 
 # Note: webview removed due to Windows compilation issues
 # Use browser-based interface instead

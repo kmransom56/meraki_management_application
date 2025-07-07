@@ -526,7 +526,8 @@ def open_topology_visualization(html_path):
         abs_path = os.path.abspath(html_path)
         if os.name == 'nt':
             # Use three slashes for Windows file URI
-            uri = f"file:///{abs_path.replace('\\', '/')}"
+            windows_path = abs_path.replace('\\', '/')
+            uri = f"file:///{windows_path}"
         else:
             uri = f"file://{abs_path}"
         webbrowser.open(uri)

@@ -1,0 +1,43 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Network Topology Visualization</title>
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+    <body>
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="search" placeholder="Search devices...">
+            </div>
+            <div class="filter-box">
+                <label>Filter by type:</label>
+                <select id="deviceFilter">
+                    <option value="all">All Devices</option>
+                    <option value="switch">Switches</option>
+                    <option value="wireless">Wireless</option>
+                    <option value="appliance">Appliances</option>
+                </select>
+            </div>
+            <div class="layout-box">
+                <label>Layout:</label>
+                <select id="layoutType">
+                    <option value="force">Force Directed</option>
+                    <option value="radial">Radial</option>
+                    <option value="hierarchical">Hierarchical</option>
+                </select>
+            </div>
+        </div>
+        <div class="stats-panel">
+            <h3>Network Statistics</h3>
+            <div id="deviceStats"></div>
+            <div id="connectionStats"></div>
+            <div id="performanceStats"></div>
+        </div>
+        <div id="topology"></div>
+        <div id="tooltip" class="tooltip"></div>
+        <script src="{{ url_for('static', filename='topology.js') }}"></script>
+    </body>
+    </html>
+    

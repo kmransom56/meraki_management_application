@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../cisco-meraki-cli-enhanced"
+		}
+	],
+	"settings": {
+		"powershell.cwd": "cisco-meraki-cli"
+	}
+}

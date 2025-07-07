@@ -7,9 +7,11 @@ WORKDIR /app
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    UV_CACHE_DIR=/tmp/uv-cache \
+    UV_LINK_MODE=copy
 
-# Install system dependencies needed for your application
+# Install system dependencies and uv
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
@@ -19,14 +21,17 @@ RUN apt-get update && apt-get install -y \
     sqlite3 \
     curl \
     git \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Install uv - much faster than pip
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Copy requirements first to leverage Docker layer caching
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org
+# Install Python dependencies with uv (much faster than pip)
+RUN uv pip install -r requirements.txt --system --native-tls --trusted-host pypi.org --trusted-host files.pythonhosted.org
 
 # Copy application code
 COPY . .
@@ -42,9 +47,9 @@ USER merakiuser
 # Expose port for web interface
 EXPOSE 5000
 
-# Health check
+# Health check using Python instead of curl for better reliability
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:5000/health || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=10)" || exit 1
 
 # Start the application
 CMD ["python", "docker_wrapper.py"]

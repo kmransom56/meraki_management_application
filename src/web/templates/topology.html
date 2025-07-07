@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Topology Visualization</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌐 Network Topology Visualization</h1>
+            <div id="network-info">
+                <span id="network-name">Loading...</span>
+                <span id="last-updated"></span>
+            </div>
+        </header>
+
+        <div class="controls">
+            <div class="search-container">
+                <input type="text" id="device-search" placeholder="Search devices..." />
+                <button id="search-btn">🔍</button>
+            </div>
+            
+            <div class="filter-container">
+                <label>Filter by type:</label>
+                <select id="device-filter">
+                    <option value="all">All Devices</option>
+                    <option value="security_appliance">Security Appliance</option>
+                    <option value="switch">Switch</option>
+                    <option value="wireless">Wireless</option>
+                    <option value="camera">Camera</option>
+                    <option value="unknown">Unknown</option>
+                </select>
+            </div>
+
+            <div class="layout-container">
+                <label>Layout:</label>
+                <select id="layout-select">
+                    <option value="force">Force Directed</option>
+                    <option value="hierarchical">Hierarchical</option>
+                    <option value="circular">Circular</option>
+                </select>
+            </div>
+
+            <button id="refresh-btn">🔄 Refresh</button>
+        </div>
+
+        <div class="main-content">
+            <div id="topology-container">
+                <svg id="topology-svg"></svg>
+                <div id="loading">
+                    <div class="spinner"></div>
+                    <p>Loading network topology...</p>
+                </div>
+            </div>
+
+            <div id="sidebar">
+                <div class="stats-panel">
+                    <h3>📊 Network Statistics</h3>
+                    
+                    <div class="stat-group">
+                        <h4>Device Count</h4>
+                        <div id="device-stats"></div>
+                    </div>
+
+                    <div class="stat-group">
+                        <h4>Connection Types</h4>
+                        <div id="connection-stats"></div>
+                    </div>
+
+                    <div class="stat-group">
+                        <h4>Network Performance</h4>
+                        <div id="performance-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Active Connections:</span>
+                                <span id="active-connections">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Total Devices:</span>
+                                <span id="total-devices">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="device-panel">
+                    <h3>🔧 Device Details</h3>
+                    <div id="device-details">
+                        <p>Click on a device to view details</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tooltip" class="tooltip"></div>
+        
+        <div id="error-panel" class="error-panel" style="display: none;">
+            <div class="error-content">
+                <h3>⚠️ Error</h3>
+                <p id="error-message"></p>
+                <button id="close-error">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='topology.js') }}"></script>
+</body>
+</html>

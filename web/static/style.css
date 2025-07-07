@@ -1,0 +1,73 @@
+
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+        display: flex;
+        flex-direction: column;
+    }
+    .controls {
+        background-color: #fff;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        gap: 20px;
+        align-items: center;
+    }
+    .search-box input {
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        width: 200px;
+    }
+    .filter-box, .layout-box {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    select {
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .stats-panel {
+        position: fixed;
+        right: 0;
+        top: 60px;
+        width: 250px;
+        background-color: white;
+        padding: 15px;
+        box-shadow: -2px 0 4px rgba(0,0,0,0.1);
+        height: calc(100vh - 60px);
+        overflow-y: auto;
+    }
+    #topology {
+        width: calc(100vw - 250px);
+        height: calc(100vh - 60px);
+        background-color: white;
+    }
+    .tooltip {
+        position: absolute;
+        padding: 10px;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        border-radius: 5px;
+        pointer-events: none;
+        display: none;
+    }
+    .node circle {
+        stroke: #fff;
+        stroke-width: 2px;
+    }
+    .node text {
+        font-size: 12px;
+    }
+    .link {
+        stroke: #999;
+        stroke-opacity: 0.6;
+        stroke-width: 2px;
+    }
+    .hidden {
+        opacity: 0.2;
+    }
+    
