@@ -1,0 +1,6 @@
+lan Confirmation
+Before I begin implementation, can you confirm:
+
+functions be CLI commands and part of a web UI
+Preferred location or module for "network visualization" in your codebase, C:\Users\keith.ransom\Utilities\cisco-meraki-cli\utilities\topology_visualizer.py
+Device serial lookup to be automated 

@@ -39,6 +39,136 @@ CONNECTION_STYLES = {
     'unknown': {'color': '#9E9E9E', 'width': 1, 'dashes': True, 'label': 'Unknown Connection', 'highlight': '#9E9E9E', 'arrow': False}
 }
 
+# ===============================
+# Meraki MX Throughput/Speed Test
+# ===============================
+import requests
+import time
+from modules.meraki import meraki_api
+
+MERAKI_BASE_URL = "https://api.meraki.com/api/v1"
+
+# Helper: Get all MX serials in a network (automated)
+def get_mx_serials(api_key, network_id):
+    devices = meraki_api.get_network_devices(api_key, network_id)
+    return [d['serial'] for d in devices if 'mx' in d.get('model', '').lower()]
+
+# 1. Initiate Throughput Test (returns test ID)
+def initiate_throughput_test(api_key, serial):
+    url = f"{MERAKI_BASE_URL}/devices/{serial}/liveTools/throughputTest"
+    headers = {"X-Cisco-Meraki-API-Key": api_key, "Content-Type": "application/json"}
+    resp = requests.post(url, headers=headers)
+    resp.raise_for_status()
+    return resp.json().get('id')
+
+# 2. Retrieve Throughput Test Results
+def get_throughput_test_result(api_key, serial, test_id):
+    url = f"{MERAKI_BASE_URL}/devices/{serial}/liveTools/throughputTest/{test_id}"
+    headers = {"X-Cisco-Meraki-API-Key": api_key}
+    resp = requests.get(url, headers=headers)
+    resp.raise_for_status()
+    return resp.json()
+
+# 3. Initiate Speed Test (Early Access, returns test ID)
+def initiate_speed_test(api_key, serial):
+    url = f"{MERAKI_BASE_URL}/devices/{serial}/liveTools/speedTest"
+    headers = {"X-Cisco-Meraki-API-Key": api_key, "Content-Type": "application/json"}
+    resp = requests.post(url, headers=headers)
+    resp.raise_for_status()
+    return resp.json().get('id')
+
+# 4. Retrieve Speed Test Results
+def get_speed_test_result(api_key, serial, test_id):
+    url = f"{MERAKI_BASE_URL}/devices/{serial}/liveTools/speedTest/{test_id}"
+    headers = {"X-Cisco-Meraki-API-Key": api_key}
+    resp = requests.get(url, headers=headers)
+    resp.raise_for_status()
+    return resp.json()
+
+# 5. Poll for test completion (common for both tests)
+def poll_test_result(get_result_func, api_key, serial, test_id, poll_interval=3, timeout=60):
+    start = time.time()
+    while True:
+        result = get_result_func(api_key, serial, test_id)
+        if result.get('status') == 'completed':
+            return result
+        if time.time() - start > timeout:
+            raise TimeoutError("Test did not complete in time.")
+        time.sleep(poll_interval)
+
+# ===============================
+# CLI Command Example
+# ===============================
+def run_mx_throughput_test_cli(api_key, network_id):
+    serials = get_mx_serials(api_key, network_id)
+    if not serials:
+        print("No MX appliances found in this network.")
+        return
+    for serial in serials:
+        print(f"\nInitiating throughput test for MX {serial}...")
+        try:
+            test_id = initiate_throughput_test(api_key, serial)
+            print(f"Test ID: {test_id}. Waiting for completion...")
+            result = poll_test_result(get_throughput_test_result, api_key, serial, test_id)
+            print(f"Throughput Test Result for {serial}: {result}")
+        except Exception as e:
+            print(f"Error running throughput test for {serial}: {e}")
+
+def run_mx_speed_test_cli(api_key, network_id):
+    serials = get_mx_serials(api_key, network_id)
+    if not serials:
+        print("No MX appliances found in this network.")
+        return
+    for serial in serials:
+        print(f"\nInitiating speed test for MX {serial}...")
+        try:
+            test_id = initiate_speed_test(api_key, serial)
+            print(f"Test ID: {test_id}. Waiting for completion...")
+            result = poll_test_result(get_speed_test_result, api_key, serial, test_id)
+            print(f"Speed Test Result for {serial}: {result}")
+        except Exception as e:
+            print(f"Error running speed test for {serial}: {e}")
+
+# ===============================
+# Web UI Integration Example (Flask route stubs)
+# ===============================
+# These would be imported and registered in your Flask app for web UI
+# from utilities.topology_visualizer import mx_throughput_test_api, mx_speed_test_api
+from flask import Blueprint, jsonify, request as flask_request
+mx_test_api = Blueprint('mx_test_api', __name__)
+
+@mx_test_api.route('/api/mx/<network_id>/throughput_test', methods=['POST'])
+def mx_throughput_test_api(network_id):
+    api_key = flask_request.headers.get('X-Cisco-Meraki-API-Key')
+    serials = get_mx_serials(api_key, network_id)
+    results = []
+    for serial in serials:
+        try:
+            test_id = initiate_throughput_test(api_key, serial)
+            result = poll_test_result(get_throughput_test_result, api_key, serial, test_id)
+            results.append({'serial': serial, 'result': result})
+        except Exception as e:
+            results.append({'serial': serial, 'error': str(e)})
+    return jsonify(results)
+
+@mx_test_api.route('/api/mx/<network_id>/speed_test', methods=['POST'])
+def mx_speed_test_api(network_id):
+    api_key = flask_request.headers.get('X-Cisco-Meraki-API-Key')
+    serials = get_mx_serials(api_key, network_id)
+    results = []
+    for serial in serials:
+        try:
+            test_id = initiate_speed_test(api_key, serial)
+            result = poll_test_result(get_speed_test_result, api_key, serial, test_id)
+            results.append({'serial': serial, 'result': result})
+        except Exception as e:
+            results.append({'serial': serial, 'error': str(e)})
+    return jsonify(results)
+
+# To use in Flask app:
+# from utilities.topology_visualizer import mx_test_api
+# app.register_blueprint(mx_test_api)
+
 def generate_topology_html(topology_data, network_name=None, output_path=None):
     """
     Generate an HTML file to visualize network topology

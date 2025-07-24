@@ -162,11 +162,10 @@ button:active {
 .spinner {
     width: 40px;
     height: 40px;
-    border: 4px solid var(--border-color);
+    border: 4px solid #f3f3f3;
     border-top: 4px solid var(--primary-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin: 0 auto 1rem;
 }
 
 @keyframes spin {
@@ -212,8 +211,8 @@ button:active {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border-color);
+    padding: 0.375rem 0;
+    border-bottom: 1px solid #f1f5f9;
 }
 
 .stat-item:last-child {
@@ -223,11 +222,16 @@ button:active {
 .stat-label {
     font-size: 0.875rem;
     color: var(--text-secondary);
+    text-transform: capitalize;
 }
 
 .stat-value {
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--text-primary);
+    background: var(--background-color);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
 }
 
 /* Device Panel */
@@ -242,120 +246,252 @@ button:active {
 }
 
 .device-info {
-    background: var(--background-color);
+    background: var(--surface-color);
+    border-radius: 0.5rem;
     padding: 1rem;
-    border-radius: 0.375rem;
+    box-shadow: var(--shadow);
+}
+
+.device-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.device-header .device-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.device-header h4 {
+    flex: 1;
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.status-online {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.status-badge.status-offline {
+    background-color: #fef2f2;
+    color: #991b1b;
+}
+
+.status-badge.status-alerting {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.status-badge.status-unknown {
+    background-color: #f1f5f9;
+    color: #475569;
+}
+
+.device-details-grid {
+    display: grid;
+    gap: 0.5rem;
     margin-bottom: 1rem;
 }
 
-.device-info h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
+.detail-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.detail-value {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+.device-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    background: var(--surface-color);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.btn:hover {
+    background: var(--background-color);
+    border-color: var(--primary-color);
     color: var(--primary-color);
 }
 
-.device-property {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.25rem;
+.btn.btn-sm {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
 }
 
-.device-property .label {
-    color: var(--text-secondary);
-    font-weight: 500;
-}
+/* Enhanced Topology Visualization Styles */
 
-.device-property .value {
-    color: var(--text-primary);
-    font-weight: 400;
-}
-
-/* SVG Node Styles */
-.node {
+/* Node Styling */
+.node-group {
     cursor: pointer;
     transition: all 0.3s ease;
 }
 
-.node:hover {
-    stroke-width: 3;
+.node-group:hover {
+    filter: brightness(1.1);
 }
 
-.node.device {
-    fill: var(--primary-color);
-    stroke: var(--surface-color);
-    stroke-width: 2;
-}
-
-.node.client {
-    fill: var(--success-color);
-    stroke: var(--surface-color);
+.node {
+    transition: all 0.3s ease;
     stroke-width: 2;
 }
 
 .node.selected {
-    stroke: var(--warning-color);
+    stroke: #ff6b6b !important;
     stroke-width: 4;
+    filter: drop-shadow(0 0 8px rgba(255, 107, 107, 0.5));
 }
 
-.node.security_appliance { fill: #ef4444; }
-.node.switch { fill: #3b82f6; }
-.node.wireless { fill: #10b981; }
-.node.camera { fill: #8b5cf6; }
-.node.unknown { fill: #6b7280; }
+.node.search-highlight {
+    stroke: #ffd93d !important;
+    stroke-width: 3;
+    filter: drop-shadow(0 0 6px rgba(255, 217, 61, 0.7));
+}
 
+.node.highlighted {
+    stroke: #4ecdc4 !important;
+    stroke-width: 3;
+    filter: drop-shadow(0 0 6px rgba(78, 205, 196, 0.7));
+}
+
+/* Node Background Circles */
+.node-background {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* Node Icons */
+.node-icon {
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+/* Status Indicators */
+.status-indicator {
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+/* Node Labels */
+.node-label {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    fill: var(--text-primary);
+    filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.8));
+}
+
+/* Link Styling */
 .link {
-    stroke: var(--border-color);
-    stroke-width: 2;
-    opacity: 0.6;
     transition: all 0.3s ease;
+    opacity: 0.8;
 }
 
 .link:hover {
-    stroke: var(--primary-color);
     opacity: 1;
+    stroke-width: 4 !important;
+}
+
+.link.network_backbone {
+    stroke: #dc3545;
+    stroke-width: 4;
+}
+
+.link.network_distribution {
+    stroke: #007bff;
     stroke-width: 3;
 }
 
-.node-label {
-    font-family: inherit;
-    font-size: 11px;
-    font-weight: 500;
-    fill: var(--text-primary);
-    text-anchor: middle;
-    pointer-events: none;
-    user-select: none;
+.link.client_connection {
+    stroke: #28a745;
+    stroke-width: 2;
+    stroke-dasharray: 5,5;
+    animation: dash 2s linear infinite;
 }
 
-/* Tooltip */
+@keyframes dash {
+    to {
+        stroke-dashoffset: -10;
+    }
+}
+
+/* Enhanced Tooltip */
 .tooltip {
     position: absolute;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(30, 41, 59, 0.95);
     color: white;
     padding: 0.75rem;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-    z-index: 1000;
-    max-width: 250px;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
     box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    max-width: 300px;
+    pointer-events: none;
 }
 
-.tooltip.visible {
-    opacity: 1;
+.tooltip-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.tooltip h4 {
-    margin: 0 0 0.5rem 0;
-    font-weight: 600;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-    padding-bottom: 0.25rem;
+.tooltip-icon {
+    font-size: 1.25rem;
 }
 
-.tooltip p {
-    margin: 0.25rem 0;
+.tooltip-content {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.tooltip-content div {
+    font-size: 0.8rem;
 }
 
 /* Error Panel */
@@ -446,4 +582,24 @@ button:active {
 
 .node {
     animation: nodeAppear 0.5s ease-out;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background-color: #0f172a;
+        --surface-color: #1e293b;
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --border-color: #334155;
+    }
+    
+    .node-label {
+        fill: #f1f5f9;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+    }
+    
+    .tooltip {
+        background: rgba(15, 23, 42, 0.95);
+    }
 }

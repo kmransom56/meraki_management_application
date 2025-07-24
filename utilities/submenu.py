@@ -66,7 +66,27 @@ from modules.tools.utilities import tools_ipcheck
 from modules.tools.utilities import tools_passgen
 from modules.tools.utilities import tools_subnetcalc
 
-from settings import term_extra
+# Import term_extra with fallback
+try:
+    from settings import term_extra
+except ImportError:
+    # Create a dummy term_extra module if not found
+    class DummyTermExtra:
+        @staticmethod
+        def clear_screen():
+            os.system('cls' if os.name == 'nt' else 'clear')
+        
+        @staticmethod
+        def print_ascii_art():
+            print("🌐 Cisco Meraki CLI Tool")
+            print("=" * 40)
+        
+        @staticmethod
+        def print_footer(footer_text):
+            print(footer_text)
+    
+    term_extra = DummyTermExtra()
+
 from utilities.topology_visualizer import visualize_network_topology
 
 import logging
@@ -203,11 +223,12 @@ def submenu_network_wide(api_key):
         print("│ 1. Display enhanced network topology".ljust(59) + "│")
         print("│ 2. Display network clients".ljust(59) + "│")
         print("│ 3. Display network devices".ljust(59) + "│")
-        print("│ 4. Return to main menu".ljust(59) + "│")
+        print("│ 4. MX Throughput/Speed Test".ljust(59) + "│")
+        print("│ 5. Return to main menu".ljust(59) + "│")
         print("│".ljust(59) + "│")
         print("└" + "─" * 58 + "┘")
         
-        choice = input(colored("\nChoose a menu option [1-4]: ", "cyan"))
+        choice = input(colored("\nChoose a menu option [1-5]: ", "cyan"))
         
         if choice == '1':
             organization_id = select_organization(api_key)
@@ -237,6 +258,26 @@ def submenu_network_wide(api_key):
                     meraki_network.display_network_devices(devices)
             input(colored("\nPress Enter to continue...", "green"))
         elif choice == '4':
+            # MX Throughput/Speed Test submenu
+            organization_id = select_organization(api_key)
+            if organization_id:
+                network_id = select_network(api_key, organization_id)
+                if network_id:
+                    from utilities.topology_visualizer import run_mx_throughput_test_cli, run_mx_speed_test_cli
+                    print("\n1. Run MX Throughput Test")
+                    print("2. Run MX Speed Test")
+                    print("3. Return to previous menu")
+                    test_choice = input(colored("Choose an option [1-3]: ", "cyan"))
+                    if test_choice == '1':
+                        run_mx_throughput_test_cli(api_key, network_id)
+                    elif test_choice == '2':
+                        run_mx_speed_test_cli(api_key, network_id)
+                    elif test_choice == '3':
+                        pass
+                    else:
+                        print(colored("Invalid option.", "red"))
+                    input(colored("\nPress Enter to continue...", "green"))
+        elif choice == '5':
             break
         else:
             print(colored("\nInvalid choice. Please try again.", "red"))
@@ -1932,7 +1973,14 @@ def select_network_with_pagination(networks, organization_name):
     Returns:
         str: Selected network ID or None if cancelled
     """
-    import utilities.term_extra as term_extra
+    # Import term_extra with fallback for pagination
+    try:
+        import utilities.term_extra as term_extra_util
+        term_extra_local = term_extra_util
+    except ImportError:
+        # Use the global term_extra fallback
+        term_extra_local = term_extra
+    
     from termcolor import colored
     
     if not networks:

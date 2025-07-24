@@ -1,0 +1,251 @@
+{
+  "network": {
+    "id": "N_123456789",
+    "name": "Enhanced Demo Network",
+    "organizationId": "O_123456789"
+  },
+  "devices": [
+    {
+      "serial": "MX-001-SERIAL",
+      "name": "Main Firewall",
+      "model": "MX84",
+      "productType": "security_appliance",
+      "status": "online",
+      "firmware": "18.107.2",
+      "mac": "00:18:0a:12:34:56",
+      "networkId": "N_123456789",
+      "tags": [
+        "critical",
+        "main-office"
+      ],
+      "address": "123 Main St, City",
+      "managementInterface": {
+        "wan1": {
+          "ip": "192.168.1.1",
+          "gateway": "192.168.1.254",
+          "dns": [
+            "8.8.8.8",
+            "8.8.4.4"
+          ]
+        }
+      },
+      "clientCount": 15
+    },
+    {
+      "serial": "MS-001-SERIAL",
+      "name": "Core Switch 1",
+      "model": "MS250-24",
+      "productType": "switch",
+      "status": "online",
+      "firmware": "14.33.1",
+      "mac": "00:18:0a:12:34:57",
+      "networkId": "N_123456789",
+      "tags": [
+        "core",
+        "main-office"
+      ],
+      "address": "123 Main St, City",
+      "clientCount": 8
+    },
+    {
+      "serial": "MS-002-SERIAL",
+      "name": "Access Switch 1",
+      "model": "MS120-24",
+      "productType": "switch",
+      "status": "online",
+      "firmware": "14.33.1",
+      "mac": "00:18:0a:12:34:58",
+      "networkId": "N_123456789",
+      "tags": [
+        "access",
+        "floor-1"
+      ],
+      "address": "123 Main St, City",
+      "clientCount": 12
+    },
+    {
+      "serial": "MR-001-SERIAL",
+      "name": "Conference Room AP",
+      "model": "MR46",
+      "productType": "wireless",
+      "status": "online",
+      "firmware": "27.7.1",
+      "mac": "00:18:0a:12:34:59",
+      "networkId": "N_123456789",
+      "tags": [
+        "wifi",
+        "conference-room"
+      ],
+      "address": "123 Main St, City",
+      "clientCount": 18
+    },
+    {
+      "serial": "MR-002-SERIAL",
+      "name": "Office AP",
+      "model": "MR42",
+      "productType": "wireless",
+      "status": "alerting",
+      "firmware": "27.7.1",
+      "mac": "00:18:0a:12:34:60",
+      "networkId": "N_123456789",
+      "tags": [
+        "wifi",
+        "office"
+      ],
+      "address": "123 Main St, City",
+      "clientCount": 6
+    },
+    {
+      "serial": "MV-001-SERIAL",
+      "name": "Entrance Camera",
+      "model": "MV12",
+      "productType": "camera",
+      "status": "online",
+      "firmware": "4.16.0",
+      "mac": "00:18:0a:12:34:61",
+      "networkId": "N_123456789",
+      "tags": [
+        "security",
+        "entrance"
+      ],
+      "address": "123 Main St, City",
+      "clientCount": 0
+    },
+    {
+      "serial": "MT-001-SERIAL",
+      "name": "Server Room Sensor",
+      "model": "MT10",
+      "productType": "sensor",
+      "status": "online",
+      "firmware": "1.0.0",
+      "mac": "00:18:0a:12:34:62",
+      "networkId": "N_123456789",
+      "tags": [
+        "environmental",
+        "server-room"
+      ],
+      "address": "123 Main St, City",
+      "clientCount": 0
+    }
+  ],
+  "clients": [
+    {
+      "id": "client_001",
+      "mac": "00:1a:2b:3c:4d:5e",
+      "description": "John's MacBook Pro",
+      "ip": "192.168.1.100",
+      "manufacturer": "Apple",
+      "os": "macOS",
+      "status": "online",
+      "ssid": "CorpWiFi",
+      "vlan": 10,
+      "recentDeviceSerial": "MR-001-SERIAL",
+      "usage": {
+        "sent": 1048576,
+        "recv": 2097152
+      },
+      "firstSeen": "2025-01-01T08:00:00Z",
+      "lastSeen": "2025-01-07T15:30:00Z"
+    },
+    {
+      "id": "client_002",
+      "mac": "00:1a:2b:3c:4d:5f",
+      "description": "Conference Room TV",
+      "ip": "192.168.1.101",
+      "manufacturer": "Samsung",
+      "os": "Tizen",
+      "status": "online",
+      "ssid": "CorpWiFi",
+      "vlan": 20,
+      "recentDeviceSerial": "MR-001-SERIAL",
+      "usage": {
+        "sent": 524288,
+        "recv": 1048576
+      },
+      "firstSeen": "2025-01-01T08:00:00Z",
+      "lastSeen": "2025-01-07T15:25:00Z"
+    },
+    {
+      "id": "client_003",
+      "mac": "00:1a:2b:3c:4d:60",
+      "description": "Office Printer",
+      "ip": "192.168.1.102",
+      "manufacturer": "HP",
+      "os": "Unknown",
+      "status": "online",
+      "vlan": 30,
+      "recentDeviceSerial": "MS-002-SERIAL",
+      "usage": {
+        "sent": 262144,
+        "recv": 524288
+      },
+      "firstSeen": "2025-01-01T08:00:00Z",
+      "lastSeen": "2025-01-07T15:20:00Z"
+    },
+    {
+      "id": "client_004",
+      "mac": "00:1a:2b:3c:4d:61",
+      "description": "Server",
+      "ip": "192.168.1.10",
+      "manufacturer": "Dell",
+      "os": "Linux",
+      "status": "online",
+      "vlan": 5,
+      "recentDeviceSerial": "MS-001-SERIAL",
+      "usage": {
+        "sent": 10485760,
+        "recv": 5242880
+      },
+      "firstSeen": "2025-01-01T08:00:00Z",
+      "lastSeen": "2025-01-07T15:35:00Z"
+    },
+    {
+      "id": "client_005",
+      "mac": "00:1a:2b:3c:4d:62",
+      "description": "iPhone 14",
+      "ip": "192.168.1.103",
+      "manufacturer": "Apple",
+      "os": "iOS",
+      "status": "online",
+      "ssid": "CorpWiFi",
+      "vlan": 10,
+      "recentDeviceSerial": "MR-002-SERIAL",
+      "usage": {
+        "sent": 1572864,
+        "recv": 3145728
+      },
+      "firstSeen": "2025-01-07T09:00:00Z",
+      "lastSeen": "2025-01-07T15:30:00Z"
+    }
+  ],
+  "statistics": {
+    "deviceTypes": {
+      "security_appliance": 1,
+      "switch": 2,
+      "wireless": 2,
+      "camera": 1,
+      "sensor": 1
+    },
+    "deviceStatuses": {
+      "online": 6,
+      "alerting": 1
+    },
+    "clientStatuses": {
+      "online": 5
+    },
+    "connectionTypes": {
+      "wireless": 3,
+      "wired": 2
+    },
+    "totalDevices": 7,
+    "totalClients": 5,
+    "activeConnections": 5
+  },
+  "metadata": {
+    "deviceCount": 7,
+    "clientCount": 5,
+    "lastUpdated": "2025-07-07T16:50:35.092788",
+    "networkId": "N_123456789",
+    "networkName": "Enhanced Demo Network"
+  }
+}
