@@ -182,25 +182,31 @@ def generate_topology_html(topology_data, network_name=None, output_path=None):
         str: Path to the generated HTML file
     """
     # Use network name from topology data if not provided
-    if network_name is None and 'network_name' in topology_data:
-        network_name = topology_data['network_name']
-    elif network_name is None:
-        network_name = "Unknown Network"
+    try:
+        logging.info(f"[generate_topology_html] Called with network_name={network_name}, output_path={output_path}")
+        if network_name is None and 'network_name' in topology_data:
+            network_name = topology_data['network_name']
+        elif network_name is None:
+            network_name = "Unknown Network"
+        logging.info(f"[generate_topology_html] Final network_name={network_name}")
+        if not output_path:
+            # Create a directory for topology visualizations if it doesn't exist
+            output_dir = Path(os.path.expanduser("~")) / "meraki_visualizations"
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = output_dir / f"{network_name.replace(' ', '_')}_topology.html"
+        logging.info(f"[generate_topology_html] Final output_path={output_path}")
+        # Convert topology data to vis.js format
+        vis_data = create_vis_network_data(topology_data)
+        vis_nodes = vis_data['nodes']
+        vis_edges = vis_data['edges']
+        connection_types = vis_data['connection_types']
+        logging.info(f"[generate_topology_html] Nodes: {len(vis_nodes)}, Edges: {len(vis_edges)}, Connection types: {connection_types}")
         
-    if not output_path:
-        # Create a directory for topology visualizations if it doesn't exist
-        output_dir = Path(os.path.expanduser("~")) / "meraki_visualizations"
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = output_dir / f"{network_name.replace(' ', '_')}_topology.html"
-    
-    # Convert topology data to vis.js format
-    vis_data = create_vis_network_data(topology_data)
-    vis_nodes = vis_data['nodes']
-    vis_edges = vis_data['edges']
-    connection_types = vis_data['connection_types']
-    
-    # Generate HTML with vis.js
-    html_content = f"""<!DOCTYPE html>
+        # Build HTML content
+        html_parts = []
+        
+        # Start HTML
+        html_parts.append(f"""<!DOCTYPE html>
 <html>
 <head>
     <title>Network Topology: {network_name}</title>
@@ -216,12 +222,14 @@ def generate_topology_html(topology_data, network_name=None, output_path=None):
             background-color: #1e1e1e;
             color: #e0e0e0;
         }}
+        
         #topology-container {{
             width: 100%;
             height: 100%;
             display: flex;
             flex-direction: column;
         }}
+        
         #topology-header {{
             background-color: #2d2d2d;
             color: #ffffff;
@@ -349,78 +357,71 @@ def generate_topology_html(topology_data, network_name=None, output_path=None):
         <div id="topology-content">
             <div id="topology-sidebar">
                 <div class="legend">
-                    <h3>Connection Types</h3>
-"""
+                    <h3>Connection Types</h3>""")
 
-    # Dynamically generate legend based on connection types present in the data
-    for conn_type in connection_types:
-        style = CONNECTION_STYLES.get(conn_type, CONNECTION_STYLES['unknown'])
-        if style['dashes']:
-            html_content += f"""
+        # Dynamically generate legend based on connection types present in the data
+        for conn_type in connection_types:
+            style = CONNECTION_STYLES.get(conn_type, CONNECTION_STYLES['unknown'])
+            if style['dashes']:
+                html_parts.append(f"""
                     <div class="legend-item">
                         <div class="legend-dash" style="border-color: {style['color']};"></div>
                         <span>{style['label']}</span>
-                    </div>"""
-        else:
-            html_content += f"""
+                    </div>""")
+            else:
+                html_parts.append(f"""
                     <div class="legend-item">
                         <div class="legend-color" style="background-color: {style['color']};"></div>
                         <span>{style['label']}</span>
-                    </div>"""
+                    </div>""")
 
-    # Add device type legend
-    device_types = set(node.get('group', 'Unknown') for node in vis_nodes)
-    client_types = set(node.get('group', 'Unknown') for node in vis_nodes 
-                      if node.get('group') == 'client')
-    
-    if device_types:
-        html_content += """
+        # Add device type legend
+        device_types = set(node.get('group', 'Unknown') for node in vis_nodes)
+        
+        if device_types:
+            html_parts.append("""
                 </div>
                 <div class="legend">
-                    <h3>Device Types</h3>"""
-        for device_type in device_types:
-            if device_type != 'client':
-                html_content += f"""
+                    <h3>Device Types</h3>""")
+            for device_type in device_types:
+                if device_type != 'client':
+                    html_parts.append(f"""
                     <div class="legend-item">
                         <div class="legend-color" style="background-color: #4CAF50;"></div>
                         <span>{device_type}</span>
-                    </div>"""
-    
-    # Add client type legend if we have client devices
-    if 'client' in device_types:
-        html_content += """
+                    </div>""")
+        
+        # Add client type legend if we have client devices
+        if 'client' in device_types:
+            html_parts.append("""
                 </div>
                 <div class="legend">
-                    <h3>Client Types</h3>"""
-        html_content += f"""
+                    <h3>Client Types</h3>
                     <div class="legend-item">
                         <div class="legend-color" style="background-color: #2196F3;"></div>
                         <span>client</span>
-                    </div>"""
+                    </div>""")
 
-    # Add device count summary
-    device_count = {}
-    for node in vis_nodes:
-        group = node.get('group', 'Unknown')
-        if group in device_count:
-            device_count[group] += 1
-        else:
-            device_count[group] = 1
-    
-    html_content += """
+        # Add device count summary
+        device_count = {}
+        for node in vis_nodes:
+            group = node.get('group', 'Unknown')
+            device_count[group] = device_count.get(group, 0) + 1
+        
+        html_parts.append("""
                 </div>
                 <div class="device-count">
-                    <h3>Device Count</h3>"""
-    
-    for device_type, count in device_count.items():
-        html_content += f"""
+                    <h3>Device Count</h3>""")
+        
+        for device_type, count in device_count.items():
+            html_parts.append(f"""
                     <div class="device-type">
                         <span>{device_type}</span>
                         <span>{count}</span>
-                    </div>"""
-    
-    # Add controls
-    html_content += """
+                    </div>""")
+        
+        # Add controls
+        html_parts.append("""
                 </div>
                 <div class="controls">
                     <h3>Controls</h3>
@@ -439,17 +440,8 @@ def generate_topology_html(topology_data, network_name=None, output_path=None):
         var container = document.getElementById('topology-network');
         
         // Parse the JSON data
-        var nodes = new vis.DataSet("""
-    
-    # Convert nodes and edges to JSON
-    html_content += json.dumps(vis_nodes)
-    
-    html_content += """);
-        var edges = new vis.DataSet("""
-    
-    html_content += json.dumps(vis_edges)
-    
-    html_content += """);
+        var nodes = new vis.DataSet(""" + json.dumps(vis_nodes) + """);
+        var edges = new vis.DataSet(""" + json.dumps(vis_edges) + """);
         
         // Provide the data in the vis format
         var data = {
@@ -631,15 +623,20 @@ def generate_topology_html(topology_data, network_name=None, output_path=None):
         setTimeout(fitNetwork, 1000);
     </script>
 </body>
-</html>
-"""
-    
-    # Write HTML to file
-    with open(output_path, 'w') as f:
-        f.write(html_content)
-    
-    logging.info(f"Network topology visualization saved to {output_path}")
-    return str(output_path)
+</html>""")
+        
+        # Join all parts
+        html_content = ''.join(html_parts)
+        
+        # Write HTML to file
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        logging.info(f"Network topology visualization saved to {output_path}")
+        return str(output_path)
+    except Exception as e:
+        logging.error(f"Error generating topology HTML: {str(e)}")
+        raise
 
 def open_topology_visualization(html_path):
     """
@@ -982,7 +979,7 @@ def create_vis_network_data(topology_data):
             'id': node['id'],
             'label': node.get('label', node['id']),
             'title': title_content,
-            'shape': shape,
+            'shape': 'circularImage',
             'image': f"https://img.icons8.com/material/48/{icon}.png",
             'group': node_type,
             'size': size,
@@ -1040,3 +1037,48 @@ def create_vis_network_data(topology_data):
         'edges': vis_edges,
         'connection_types': connection_types
     }
+
+# Complete the remaining functions
+def open_topology_visualization(html_path):
+    """
+    Open the topology visualization in the default web browser
+    
+    Args:
+        html_path (str): Path to the HTML file
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Ensure absolute path and correct URI format for Windows
+        abs_path = os.path.abspath(html_path)
+        if os.name == 'nt':
+            # Use three slashes for Windows file URI
+            windows_path = abs_path.replace('\\', '/')
+            uri = f"file:///{windows_path}"
+        else:
+            uri = f"file://{abs_path}"
+        webbrowser.open(uri)
+        return True
+    except Exception as e:
+        logging.error(f"Error opening topology visualization: {str(e)}")
+        return False
+
+def visualize_network_topology(topology_data, network_name=None):
+    """
+    Generate and open a network topology visualization
+    
+    Args:
+        topology_data (dict): Network topology data with nodes and links
+        network_name (str, optional): Name of the network. If None, will use from topology_data.
+        
+    Returns:
+        str: Path to the generated HTML file or None if failed
+    """
+    try:
+        html_path = generate_topology_html(topology_data, network_name)
+        open_topology_visualization(html_path)
+        return html_path
+    except Exception as e:
+        logging.error(f"Error visualizing network topology: {str(e)}")
+        return None

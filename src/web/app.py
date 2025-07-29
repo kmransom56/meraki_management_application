@@ -4,12 +4,36 @@ Flask web application for network topology visualization.
 import os
 import json
 import logging
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_from_directory
 from typing import Dict, Any, List
 
 # Global variables to store network data
 network_data = {}
+
 app = Flask(__name__)
+
+# Route to serve visualization HTML files
+@app.route('/view-viz/<filename>')
+def view_viz(filename):
+    # Check both Docker and Windows paths
+    docker_viz_dir = '/home/merakiuser/meraki_visualizations'
+    windows_viz_dir = os.path.expanduser(r'C:/Users/keith.ransom/meraki_visualizations')
+    
+    # Use Docker path if running in container, Windows path otherwise
+    if os.path.exists(docker_viz_dir):
+        viz_dir = docker_viz_dir
+    else:
+        viz_dir = windows_viz_dir
+    
+    # Security: Only allow .html files
+    if not filename.endswith('.html'):
+        return "Invalid file type", 400
+    
+    file_path = os.path.join(viz_dir, filename)
+    if not os.path.exists(file_path):
+        return f"File not found: {file_path}", 404
+    
+    return send_from_directory(viz_dir, filename)
 
 def create_app(data: Dict[str, Any] = None) -> Flask:
     """Create and configure Flask app."""

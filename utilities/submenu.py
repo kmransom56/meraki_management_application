@@ -861,24 +861,32 @@ def network_wide_operations(api_key, organization_id):
                         from utilities.topology_visualizer import build_topology_from_api_data, visualize_network_topology
                         
                         # Build the topology with the collected data
+                        # Robust error handling for API responses
+                        if not isinstance(devices, list) or not devices:
+                            print("\n[ERROR] Devices data is empty or invalid. Cannot generate visualization.")
+                            logging.error(f"Devices API response: {devices}")
+                            return
+                        if not isinstance(clients, list):
+                            print("\n[ERROR] Clients data is invalid. Cannot generate visualization.")
+                            logging.error(f"Clients API response: {clients}")
+                            return
                         topology = build_topology_from_api_data(devices, clients, links)
-                        
+                        print("\n[DEBUG] Devices:", devices)
+                        print("[DEBUG] Clients:", clients)
+                        print("[DEBUG] Topology:", topology)
                         # Display summary of the topology
                         print("\nNetwork Topology Summary:")
                         print(f"Devices: {len(devices)}")
                         print(f"Clients: {len(clients)}")
                         print(f"Connections: {len(topology['links'])}")
-                        
                         # Display device types
                         device_types = {}
-                        for node in topology['nodes']:
+                        for node in topology.get('nodes', []):
                             node_type = node.get('type', 'unknown')
                             device_types[node_type] = device_types.get(node_type, 0) + 1
-                        
                         print("\nDevice Types:")
                         for device_type, count in device_types.items():
                             print(f"{device_type}: {count}")
-                        
                         # Display devices
                         print("\nDevices:")
                         device_table = []
@@ -890,10 +898,8 @@ def network_wide_operations(api_key, organization_id):
                                 device.get('lanIp', device.get('ip', 'Unknown')),
                                 "Yes" if device.get('uplinkSupported', False) else "No"
                             ])
-                        
                         print(tabulate(device_table, headers=['Name', 'Model', 'Type', 'IP Address', 'Uplink Support'], 
                                       tablefmt='pretty'))
-                        
                         # Display sample of clients
                         print("\nClient Devices (sample):")
                         client_table = []
@@ -905,20 +911,28 @@ def network_wide_operations(api_key, organization_id):
                                 client.get('mac', 'Unknown'),
                                 client.get('vlan', 'Unknown')
                             ])
-                        
                         print(tabulate(client_table, headers=['Name', 'Type', 'IP Address', 'MAC', 'VLAN'], 
                                       tablefmt='pretty'))
-                        
                         if len(clients) > 10:
                             print(f"... and {len(clients) - 10} more clients")
-                        
-                        # Generate and open the visualization
-                        html_path = visualize_network_topology(topology, network_name)
-                        if html_path:
-                            print(colored(f"\nNetwork topology visualization saved to {html_path}", "green"))
-                            print(colored("The visualization has been opened in your default web browser.", "green"))
+                        # Improved visualization logic: warn if partial data
+                        if not topology.get('nodes') or not topology.get('links'):
+                            print("\n[WARNING] Topology data is incomplete. Generating minimal visualization.")
+                            # Optionally, generate a minimal HTML with a warning message
+                            minimal_topology = topology if topology.get('nodes') else {'nodes': [], 'links': []}
+                            html_path = visualize_network_topology(minimal_topology, network_name)
+                            if html_path:
+                                print(colored(f"\nMinimal network topology visualization saved to {html_path}", "yellow"))
+                                print(colored("The visualization has been opened in your default web browser.", "yellow"))
+                            else:
+                                print(colored("\nFailed to generate minimal network topology visualization.", "red"))
                         else:
-                            print(colored("\nFailed to generate network topology visualization.", "red"))
+                            html_path = visualize_network_topology(topology, network_name)
+                            if html_path:
+                                print(colored(f"\nNetwork topology visualization saved to {html_path}", "green"))
+                                print(colored("The visualization has been opened in your default web browser.", "green"))
+                            else:
+                                print(colored("\nFailed to generate network topology visualization.", "red"))
                     except Exception as e:
                         logging.error(f"Error generating network diagram: {str(e)}")
                         print(colored(f"\nError generating network diagram: {str(e)}", "red"))

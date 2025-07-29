@@ -1,0 +1,7 @@
+{
+    "terminal.integrated.commandsToSkipShell": [
+        "terminal.integrated.shell.window"
+    ],
+    "terminal.integrated.defaultProfile.windows": "Command Prompt",
+    "claudeCodeChat.permissions.yoloMode": true
+}
