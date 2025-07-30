@@ -89,6 +89,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showSection('multi-vendor')">
+                            <i class="fas fa-network-wired"></i> Multi-Vendor Topology
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="#" onclick="showSection('tools')">
                             <i class="fas fa-tools"></i> Swiss Army Knife
                         </a>
@@ -341,6 +346,9 @@
                 case 'topology':
                     showTopologySection();
                     break;
+                case 'multi-vendor':
+                    showMultiVendorTopologySection();
+                    break;
                 case 'environmental':
                     showEnvironmentalSection();
                     break;
@@ -432,10 +440,13 @@
 
         // Load networks for selected organization
         async function loadNetworks() {
-            const orgId = document.getElementById('organizationSelect').value;
+            const orgSelect = document.getElementById('organizationSelect');
+            const orgId = orgSelect.value;
             if (!orgId) return;
 
-            currentOrganization = orgId;
+            // Set current organization with both id and name
+            const orgName = orgSelect.selectedOptions[0].textContent;
+            currentOrganization = { id: orgId, name: orgName };
             
             try {
                 const response = await fetch(`/api/networks/${orgId}`);
@@ -444,13 +455,25 @@
                 const select = document.getElementById('networkSelect');
                 select.innerHTML = '<option value="">Select Network...</option>';
                 
-                result.networks.forEach(network => {
-                    const option = document.createElement('option');
-                    option.value = network.id;
-                    option.textContent = network.name;
-                    select.appendChild(option);
-                });
+                // Handle both result.networks and direct array response
+                const networks = result.networks || result;
+                if (Array.isArray(networks)) {
+                    networks.forEach(network => {
+                        const option = document.createElement('option');
+                        option.value = network.id;
+                        option.textContent = network.name;
+                        select.appendChild(option);
+                    });
+                }
+                
+                // Refresh multi-vendor networks if that section is currently active
+                const multiVendorSelect = document.getElementById('multiVendorNetwork');
+                if (multiVendorSelect) {
+                    loadNetworksForMultiVendor();
+                }
+                
             } catch (error) {
+                console.error('Error loading networks:', error);
                 showAlert('Error loading networks: ' + error.message, 'danger');
             }
         }
@@ -1455,6 +1478,455 @@
         document.addEventListener('DOMContentLoaded', function() {
             showSection('dashboard');
         });
+        
+        // Multi-Vendor Topology Functions
+        function showMultiVendorTopologySection() {
+            const dynamicContent = document.getElementById('dynamic-content');
+            dynamicContent.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-network-wired"></i> Multi-Vendor Network Topology</h5>
+                        <p class="text-muted">Unified view of Cisco Meraki and Fortinet devices in your restaurant networks</p>
+                        
+                        <!-- Fortinet Configuration -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card border-warning">
+                                    <div class="card-header bg-warning text-dark">
+                                        <h6 class="mb-0"><i class="fas fa-shield-alt"></i> Fortinet Device Configuration</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="fortigate-config">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Fortigate Host/IP</label>
+                                                    <input type="text" class="form-control" id="fortigate-host" placeholder="192.168.1.1">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">API Token</label>
+                                                    <input type="password" class="form-control" id="fortigate-token" placeholder="API Token">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Device Name</label>
+                                                    <input type="text" class="form-control" id="fortigate-name" placeholder="Restaurant Firewall">
+                                                </div>
+                                            </div>
+                                            <div class="mt-3">
+                                                <button class="btn btn-warning" onclick="addFortigateDevice()">
+                                                    <i class="fas fa-plus"></i> Add Fortigate
+                                                </button>
+                                                <button class="btn btn-outline-warning" onclick="testFortinetConnections()">
+                                                    <i class="fas fa-plug"></i> Test Connections
+                                                </button>
+                                                <button class="btn btn-outline-secondary" onclick="clearFortigateConfig()">
+                                                    <i class="fas fa-trash"></i> Clear All
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div id="fortigate-list" class="mt-3"></div>
+                                        <div id="fortinet-test-results" class="mt-3"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Network Selection -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="multiVendorNetwork" class="form-label">Select Meraki Network</label>
+                                <select class="form-select" id="multiVendorNetwork">
+                                    <option value="">Select a network...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <button class="btn btn-primary" onclick="generateMultiVendorTopology()">
+                                    <i class="fas fa-project-diagram"></i> Generate Multi-Vendor Topology
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Topology Results -->
+                        <div id="multi-vendor-results"></div>
+                        
+                        <!-- Topology Statistics -->
+                        <div id="topology-stats" class="mt-4"></div>
+                    </div>
+                </div>
+            `;
+            
+            // Load networks for multi-vendor topology only if organization is selected
+            if (currentOrganization) {
+                loadNetworksForMultiVendor();
+            } else {
+                // Show message to select organization first
+                const networkSelect = document.getElementById('multiVendorNetwork');
+                if (networkSelect) {
+                    networkSelect.innerHTML = '<option value="">Please select an organization first</option>';
+                }
+            }
+        }
+        
+        let fortigateDevices = [];
+        
+        function addFortigateDevice() {
+            const host = document.getElementById('fortigate-host').value;
+            const token = document.getElementById('fortigate-token').value;
+            const name = document.getElementById('fortigate-name').value;
+            
+            if (!host || !token) {
+                showAlert('Please enter both host and API token', 'warning');
+                return;
+            }
+            
+            const device = {
+                host: host,
+                api_token: token,
+                name: name || host
+            };
+            
+            fortigateDevices.push(device);
+            updateFortigateList();
+            
+            // Clear form
+            document.getElementById('fortigate-host').value = '';
+            document.getElementById('fortigate-token').value = '';
+            document.getElementById('fortigate-name').value = '';
+            
+            showAlert(`Added Fortigate device: ${device.name}`, 'success');
+        }
+        
+        function updateFortigateList() {
+            const listDiv = document.getElementById('fortigate-list');
+            if (fortigateDevices.length === 0) {
+                listDiv.innerHTML = '';
+                return;
+            }
+            
+            let html = '<h6>Configured Fortigate Devices:</h6><div class="row">';
+            fortigateDevices.forEach((device, index) => {
+                html += `
+                    <div class="col-md-4 mb-2">
+                        <div class="card border-secondary">
+                            <div class="card-body p-2">
+                                <h6 class="card-title mb-1">${device.name}</h6>
+                                <small class="text-muted">${device.host}</small>
+                                <button class="btn btn-sm btn-outline-danger float-end" onclick="removeFortigateDevice(${index})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            listDiv.innerHTML = html;
+        }
+        
+        function removeFortigateDevice(index) {
+            fortigateDevices.splice(index, 1);
+            updateFortigateList();
+        }
+        
+        function clearFortigateConfig() {
+            fortigateDevices = [];
+            updateFortigateList();
+            showAlert('Cleared all Fortigate devices', 'info');
+        }
+        
+        async function testFortinetConnections() {
+            if (fortigateDevices.length === 0) {
+                showAlert('Please add at least one Fortigate device first', 'warning');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('fortinet-test-results');
+            resultsDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Testing Fortinet connections...</div>';
+            
+            try {
+                // Configure Fortinet devices first
+                const configResponse = await fetch('/api/fortinet/configure', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fortigates: fortigateDevices })
+                });
+                const configResult = await configResponse.json();
+                
+                if (!configResult.success) {
+                    throw new Error(configResult.error);
+                }
+                
+                // Test connections
+                const testResponse = await fetch('/api/fortinet/test', {
+                    method: 'POST'
+                });
+                const testResult = await testResponse.json();
+                
+                if (testResult.success) {
+                    let html = '<div class="alert alert-success">Connection test completed</div><div class="row">';
+                    testResult.results.forEach(result => {
+                        const statusClass = result.status === 'connected' ? 'success' : 'danger';
+                        const statusIcon = result.status === 'connected' ? 'check' : 'times';
+                        html += `
+                            <div class="col-md-4 mb-2">
+                                <div class="card border-${statusClass}">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-title mb-1">${result.name}</h6>
+                                        <small class="text-muted">${result.host}</small>
+                                        <span class="badge bg-${statusClass} float-end">
+                                            <i class="fas fa-${statusIcon}"></i> ${result.status}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    resultsDiv.innerHTML = html;
+                } else {
+                    throw new Error(testResult.error);
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Connection test failed: ${error.message}</div>`;
+            }
+        }
+        
+        async function loadNetworksForMultiVendor() {
+            if (!currentOrganization) {
+                console.log('No current organization selected for multi-vendor');
+                return;
+            }
+            
+            try {
+                console.log('Loading networks for multi-vendor, org:', currentOrganization);
+                const response = await fetch(`/api/networks/${currentOrganization.id}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Networks API response:', data);
+                
+                const networkSelect = document.getElementById('multiVendorNetwork');
+                if (!networkSelect) {
+                    console.error('multiVendorNetwork select element not found');
+                    return;
+                }
+                
+                networkSelect.innerHTML = '<option value="">Select a network...</option>';
+                
+                // Handle both data.networks and direct array response
+                const networks = data.networks || data;
+                
+                if (Array.isArray(networks) && networks.length > 0) {
+                    networks.forEach(network => {
+                        const option = document.createElement('option');
+                        option.value = network.id;
+                        // Handle missing productTypes gracefully
+                        const productTypes = network.productTypes ? network.productTypes.join(', ') : 'Unknown';
+                        option.textContent = `${network.name} (${productTypes})`;
+                        networkSelect.appendChild(option);
+                    });
+                    console.log(`Loaded ${networks.length} networks for multi-vendor`);
+                } else {
+                    console.log('No networks found or networks is not an array:', networks);
+                    networkSelect.innerHTML = '<option value="">No networks available</option>';
+                }
+            } catch (error) {
+                console.error('Error loading networks for multi-vendor:', error);
+                const networkSelect = document.getElementById('multiVendorNetwork');
+                if (networkSelect) {
+                    networkSelect.innerHTML = '<option value="">Error loading networks</option>';
+                }
+            }
+        }
+        
+        async function generateMultiVendorTopology() {
+            const networkId = document.getElementById('multiVendorNetwork').value;
+            if (!networkId) {
+                showAlert('Please select a network first', 'warning');
+                return;
+            }
+            
+            const networkName = document.getElementById('multiVendorNetwork').selectedOptions[0].textContent;
+            const resultsDiv = document.getElementById('multi-vendor-results');
+            const statsDiv = document.getElementById('topology-stats');
+            
+            resultsDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Generating multi-vendor topology...</div>';
+            statsDiv.innerHTML = '';
+            
+            try {
+                // Configure Fortinet devices if any are defined
+                if (fortigateDevices.length > 0) {
+                    const configResponse = await fetch('/api/fortinet/configure', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fortigates: fortigateDevices })
+                    });
+                    const configResult = await configResponse.json();
+                    if (!configResult.success) {
+                        throw new Error(`Fortinet configuration failed: ${configResult.error}`);
+                    }
+                }
+                
+                // Get multi-vendor topology
+                const response = await fetch(`/api/topology/multi-vendor/${networkId}?network_name=${encodeURIComponent(networkName)}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayMultiVendorTopology(result.topology, result.stats, result.vendor_stats);
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Error generating topology: ${error.message}</div>`;
+            }
+        }
+        
+        function displayMultiVendorTopology(topology, stats, vendorStats) {
+            const resultsDiv = document.getElementById('multi-vendor-results');
+            const statsDiv = document.getElementById('topology-stats');
+            
+            // Display topology summary
+            let html = `
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-check-circle"></i> Multi-Vendor Topology Generated</h6>
+                    </div>
+                    <div class="card-body">
+                        <h6>Network: ${topology.network_name}</h6>
+                        <p class="text-muted">Generated: ${new Date(topology.timestamp).toLocaleString()}</p>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Devices by Vendor:</h6>
+                                <ul class="list-group list-group-flush">
+            `;
+            
+            // Display devices by vendor
+            const devicesByVendor = {};
+            topology.devices.forEach(device => {
+                if (!devicesByVendor[device.vendor]) {
+                    devicesByVendor[device.vendor] = [];
+                }
+                devicesByVendor[device.vendor].push(device);
+            });
+            
+            Object.entries(devicesByVendor).forEach(([vendor, devices]) => {
+                const vendorColor = vendor === 'meraki' ? 'primary' : vendor === 'fortinet' ? 'warning' : 'secondary';
+                html += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-circle text-${vendorColor}"></i> ${vendor.charAt(0).toUpperCase() + vendor.slice(1)}</span>
+                        <span class="badge bg-${vendorColor} rounded-pill">${devices.length}</span>
+                    </li>
+                `;
+            });
+            
+            html += `
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Device Details:</h6>
+                                <div class="device-list" style="max-height: 300px; overflow-y: auto;">
+            `;
+            
+            // Display individual devices
+            topology.devices.forEach(device => {
+                const vendorColor = device.vendor === 'meraki' ? 'primary' : device.vendor === 'fortinet' ? 'warning' : 'secondary';
+                const deviceIcon = device.type === 'firewall' ? 'shield-alt' : 
+                                 device.type === 'access_point' ? 'wifi' : 
+                                 device.type === 'switch' ? 'network-wired' : 'server';
+                
+                html += `
+                    <div class="card mb-2 border-${vendorColor}">
+                        <div class="card-body p-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1"><i class="fas fa-${deviceIcon} text-${vendorColor}"></i> ${device.name}</h6>
+                                    <small class="text-muted">${device.model || device.type} | ${device.status || 'unknown'}</small>
+                                </div>
+                                <span class="badge bg-${vendorColor}">${device.vendor}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-outline-primary" onclick="generateMultiVendorHTML('${topology.network_id}', '${topology.network_name}')">
+                                <i class="fas fa-file-code"></i> Generate Interactive Visualization
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.innerHTML = html;
+            
+            // Display statistics
+            if (stats) {
+                let statsHtml = `
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card text-center border-primary">
+                                <div class="card-body">
+                                    <h5 class="card-title text-primary">${stats.total_devices}</h5>
+                                    <p class="card-text">Total Devices</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center border-info">
+                                <div class="card-body">
+                                    <h5 class="card-title text-info">${stats.total_clients}</h5>
+                                    <p class="card-text">Total Clients</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center border-success">
+                                <div class="card-body">
+                                    <h5 class="card-title text-success">${stats.total_connections}</h5>
+                                    <p class="card-text">Connections</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center border-warning">
+                                <div class="card-body">
+                                    <h5 class="card-title text-warning">${Object.keys(devicesByVendor).length}</h5>
+                                    <p class="card-text">Vendors</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                statsDiv.innerHTML = statsHtml;
+            }
+        }
+        
+        async function generateMultiVendorHTML(networkId, networkName) {
+            try {
+                const response = await fetch(`/api/topology/multi-vendor/html/${networkId}?network_name=${encodeURIComponent(networkName)}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(`Interactive visualization generated: ${result.html_path}`, 'success');
+                    // Optionally open the HTML file in a new window
+                    window.open(result.html_path, '_blank');
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                showAlert(`Error generating HTML visualization: ${error.message}`, 'danger');
+            }
+        }
+        
     </script>
 </body>
 </html>

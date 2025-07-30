@@ -21,13 +21,23 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Import SSL fixes for corporate environments
 try:
     import ssl_universal_fix
-    print("✅ SSL universal fix applied")
+    print("[OK] SSL universal fix applied")
 except ImportError:
     try:
         import ssl_patch
-        print("✅ SSL patch applied")
+        print("[OK] SSL patch applied")
     except ImportError:
-        print("⚠️ No SSL fixes available - may have issues in corporate environments")
+        print("[WARNING] No SSL fixes available - may have issues in corporate environments")
+
+# Import multi-vendor topology modules
+try:
+    from fortinet_api import fortinet_manager
+    from multi_vendor_topology import multi_vendor_engine, MultiVendorTopologyEngine
+    print("[OK] Multi-vendor topology modules loaded")
+except ImportError as e:
+    print(f"[WARNING] Multi-vendor modules not available: {e}")
+    fortinet_manager = None
+    multi_vendor_engine = None
 
 # Import existing modules with error handling
 try:
@@ -39,9 +49,9 @@ try:
     from enhanced_visualizer import create_enhanced_visualization, build_topology_from_api_data
     from utilities import submenu
     CLI_MODULES_AVAILABLE = True
-    print("✅ All CLI modules loaded successfully")
+    print("[OK] All CLI modules loaded successfully")
 except ImportError as e:
-    print(f"⚠️ Some CLI modules not available: {e}")
+    print(f"[WARNING] Some CLI modules not available: {e}")
     CLI_MODULES_AVAILABLE = False
 
 # Configure logging
@@ -489,6 +499,168 @@ def get_topology(network_id):
     
     except Exception as e:
         logger.error(f"Error getting topology: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/visualization/data')
+def get_visualization_data():
+    """Get visualization data for topology - generic endpoint"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        # Return basic visualization configuration
+        return jsonify({
+            'success': True,
+            'device_icons': {
+                'switch': 'settings_ethernet',
+                'wireless': 'wifi',
+                'appliance': 'security',
+                'camera': 'videocam',
+                'client': 'devices_other',
+                'unknown': 'device_unknown'
+            },
+            'connection_styles': {
+                'uplink': {'color': '#00C853', 'width': 3},
+                'switch': {'color': '#2196F3', 'width': 2},
+                'wireless': {'color': '#FF9800', 'width': 2},
+                'wired': {'color': '#607D8B', 'width': 1},
+                'unknown': {'color': '#9E9E9E', 'width': 1}
+            }
+        })
+    
+    except Exception as e:
+        logger.error(f"Error getting visualization data: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Multi-Vendor Topology Routes
+@app.route('/api/fortinet/configure', methods=['POST'])
+def configure_fortinet():
+    """Configure Fortinet devices for topology integration"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        data = request.get_json()
+        fortigate_configs = data.get('fortigates', [])
+        
+        if not fortinet_manager:
+            return jsonify({'error': 'Fortinet integration not available'}), 503
+        
+        # Clear existing configurations
+        fortinet_manager.fortigate_hosts = []
+        fortinet_manager.api_tokens = {}
+        
+        # Add new Fortigate configurations
+        for config in fortigate_configs:
+            host = config.get('host')
+            api_token = config.get('api_token')
+            name = config.get('name')
+            
+            if host and api_token:
+                fortinet_manager.add_fortigate(host, api_token, name)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Configured {len(fortigate_configs)} Fortigate devices',
+            'fortigates': len(fortinet_manager.fortigate_hosts)
+        })
+    
+    except Exception as e:
+        logger.error(f"Error configuring Fortinet: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/fortinet/test', methods=['POST'])
+def test_fortinet_connection():
+    """Test connection to Fortinet devices"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        if not fortinet_manager:
+            return jsonify({'error': 'Fortinet integration not available'}), 503
+        
+        results = []
+        for fortigate_config in fortinet_manager.fortigate_hosts:
+            test_result = fortinet_manager.test_connection(fortigate_config)
+            results.append({
+                'name': fortigate_config['name'],
+                'host': fortigate_config['host'],
+                'status': 'connected' if test_result else 'failed'
+            })
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'total_tested': len(results)
+        })
+    
+    except Exception as e:
+        logger.error(f"Error testing Fortinet connections: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/topology/multi-vendor/<network_id>')
+def get_multi_vendor_topology(network_id):
+    """Get comprehensive multi-vendor topology including Meraki and Fortinet devices"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        # Get network name
+        network_name = request.args.get('network_name', 'Multi-Vendor Network')
+        
+        # Initialize multi-vendor engine with current managers
+        if multi_vendor_engine:
+            multi_vendor_engine.meraki_manager = meraki_manager
+            multi_vendor_engine.fortinet_manager = fortinet_manager
+            
+            # Build unified topology
+            topology_data = multi_vendor_engine.build_unified_topology(network_id, network_name)
+            
+            return jsonify({
+                'success': True,
+                'topology': topology_data,
+                'stats': topology_data.get('stats', {}),
+                'vendor_stats': topology_data.get('vendor_stats', {})
+            })
+        else:
+            return jsonify({'error': 'Multi-vendor topology engine not available'}), 503
+    
+    except Exception as e:
+        logger.error(f"Error getting multi-vendor topology: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/topology/multi-vendor/html/<network_id>')
+def generate_multi_vendor_html(network_id):
+    """Generate HTML visualization for multi-vendor topology"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        network_name = request.args.get('network_name', 'Multi-Vendor Network')
+        
+        if multi_vendor_engine:
+            multi_vendor_engine.meraki_manager = meraki_manager
+            multi_vendor_engine.fortinet_manager = fortinet_manager
+            
+            # Build topology data
+            topology_data = multi_vendor_engine.build_unified_topology(network_id, network_name)
+            
+            # Generate HTML visualization
+            html_path = multi_vendor_engine.generate_multi_vendor_html(topology_data)
+            
+            if html_path:
+                return jsonify({
+                    'success': True,
+                    'html_path': html_path,
+                    'message': 'Multi-vendor topology HTML generated successfully'
+                })
+            else:
+                return jsonify({'error': 'Failed to generate HTML visualization'}), 500
+        else:
+            return jsonify({'error': 'Multi-vendor topology engine not available'}), 503
+    
+    except Exception as e:
+        logger.error(f"Error generating multi-vendor HTML: {e}")
         return jsonify({'error': str(e)}), 500
 
 # Swiss Army Knife Tools Routes
@@ -1256,15 +1428,15 @@ def get_network_status(network_id):
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    print("🌐 Starting Comprehensive Cisco Meraki Web Management Interface")
+    print("[STARTING] Comprehensive Cisco Meraki Web Management Interface")
     print("=" * 70)
-    print("✅ Integrates ALL CLI functionality into modern web interface")
-    print("🔧 Features: Network Status, Device Management, Topology, Tools, Settings")
-    print("🚀 Access at: http://localhost:5000")
+    print("[OK] Integrates ALL CLI functionality into modern web interface")
+    print("[FEATURES] Network Status, Device Management, Topology, Tools, Settings")
+    print("[ACCESS] http://localhost:5000")
     
     if CLI_MODULES_AVAILABLE:
-        print("✅ All CLI modules loaded - Full functionality available")
+        print("[OK] All CLI modules loaded - Full functionality available")
     else:
-        print("⚠️ Some CLI modules missing - Limited functionality")
+        print("[WARNING] Some CLI modules missing - Limited functionality")
     
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
