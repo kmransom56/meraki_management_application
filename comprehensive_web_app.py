@@ -54,6 +54,10 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_USE_SIGNER'] = True
+app.config['SESSION_KEY_PREFIX'] = 'meraki_'
 
 # Global storage for active visualizations and data
 active_visualizations = {}
@@ -147,6 +151,208 @@ class ComprehensiveMerakiManager:
         except Exception as e:
             logger.error(f"Error getting clients: {e}")
             return []
+    
+    def create_speed_test(self, device_serial):
+        """Create a speed test for a device"""
+        try:
+            if not self.dashboard:
+                return None
+            # Create speed test job
+            result = self.dashboard.devices.createDeviceLiveToolsSpeedTest(device_serial)
+            return result
+        except Exception as e:
+            logger.error(f"Error creating speed test: {e}")
+            return None
+    
+    def get_speed_test_result(self, device_serial, speed_test_id):
+        """Get speed test results"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.getDeviceLiveToolsSpeedTest(device_serial, speed_test_id)
+            return result
+        except Exception as e:
+            logger.error(f"Error getting speed test result: {e}")
+            return None
+    
+    def create_throughput_test(self, device_serial):
+        """Create a throughput test for a device"""
+        try:
+            if not self.dashboard:
+                return None
+            # Create throughput test job
+            result = self.dashboard.devices.createDeviceLiveToolsThroughputTest(device_serial)
+            return result
+        except Exception as e:
+            logger.error(f"Error creating throughput test: {e}")
+            return None
+    
+    def get_throughput_test_result(self, device_serial, throughput_test_id):
+        """Get throughput test results"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.getDeviceLiveToolsThroughputTest(device_serial, throughput_test_id)
+            return result
+        except Exception as e:
+            logger.error(f"Error getting throughput test result: {e}")
+            return None
+    
+    # Additional Live Tools Methods
+    
+    def create_arp_table_test(self, device_serial):
+        """Create ARP table live tool job"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.createDeviceLiveToolsArpTable(device_serial)
+            return result
+        except Exception as e:
+            logger.error(f"Error creating ARP table test: {e}")
+            return None
+    
+    def get_arp_table_results(self, device_serial, arp_table_id):
+        """Get ARP table test results"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.getDeviceLiveToolsArpTable(device_serial, arp_table_id)
+            return result
+        except Exception as e:
+            logger.error(f"Error getting ARP table results: {e}")
+            return None
+    
+    def create_mac_table_test(self, device_serial):
+        """Create MAC table live tool job"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.createDeviceLiveToolsMacTable(device_serial)
+            return result
+        except Exception as e:
+            logger.error(f"Error creating MAC table test: {e}")
+            return None
+    
+    def get_mac_table_results(self, device_serial, mac_table_id):
+        """Get MAC table test results"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.getDeviceLiveToolsMacTable(device_serial, mac_table_id)
+            return result
+        except Exception as e:
+            logger.error(f"Error getting MAC table results: {e}")
+            return None
+    
+    def create_ping_test(self, device_serial, target, count=5):
+        """Create ping live tool job"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.createDeviceLiveToolsPing(device_serial, target=target, count=count)
+            return result
+        except Exception as e:
+            logger.error(f"Error creating ping test: {e}")
+            return None
+    
+    def get_ping_results(self, device_serial, ping_id):
+        """Get ping test results"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.getDeviceLiveToolsPing(device_serial, ping_id)
+            return result
+        except Exception as e:
+            logger.error(f"Error getting ping results: {e}")
+            return None
+    
+    def create_routing_table_test(self, device_serial):
+        """Create routing table live tool job"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.createDeviceLiveToolsRoutingTable(device_serial)
+            return result
+        except Exception as e:
+            logger.error(f"Error creating routing table test: {e}")
+            return None
+    
+    def get_routing_table_results(self, device_serial, routing_table_id):
+        """Get routing table test results"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.getDeviceLiveToolsRoutingTable(device_serial, routing_table_id)
+            return result
+        except Exception as e:
+            logger.error(f"Error getting routing table results: {e}")
+            return None
+    
+    def create_cycle_port_test(self, device_serial, ports):
+        """Create cycle port live tool job"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.createDeviceLiveToolsCyclePort(device_serial, ports=ports)
+            return result
+        except Exception as e:
+            logger.error(f"Error creating cycle port test: {e}")
+            return None
+    
+    def get_cycle_port_results(self, device_serial, cycle_port_id):
+        """Get cycle port test results"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.getDeviceLiveToolsCyclePort(device_serial, cycle_port_id)
+            return result
+        except Exception as e:
+            logger.error(f"Error getting cycle port results: {e}")
+            return None
+    
+    def create_ospf_neighbors_test(self, device_serial):
+        """Create OSPF neighbors live tool job"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.createDeviceLiveToolsOspfNeighbors(device_serial)
+            return result
+        except Exception as e:
+            logger.error(f"Error creating OSPF neighbors test: {e}")
+            return None
+    
+    def get_ospf_neighbors_results(self, device_serial, ospf_neighbors_id):
+        """Get OSPF neighbors test results"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.getDeviceLiveToolsOspfNeighbors(device_serial, ospf_neighbors_id)
+            return result
+        except Exception as e:
+            logger.error(f"Error getting OSPF neighbors results: {e}")
+            return None
+    
+    def create_dhcp_leases_test(self, device_serial):
+        """Create DHCP leases live tool job"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.createDeviceLiveToolsDhcpLeases(device_serial)
+            return result
+        except Exception as e:
+            logger.error(f"Error creating DHCP leases test: {e}")
+            return None
+    
+    def get_dhcp_leases_results(self, device_serial, dhcp_leases_id):
+        """Get DHCP leases test results"""
+        try:
+            if not self.dashboard:
+                return None
+            result = self.dashboard.devices.getDeviceLiveToolsDhcpLeases(device_serial, dhcp_leases_id)
+            return result
+        except Exception as e:
+            logger.error(f"Error getting DHCP leases results: {e}")
+            return None
 
 # Global manager instance
 meraki_manager = ComprehensiveMerakiManager()
@@ -167,26 +373,41 @@ def validate_api_key():
         if not api_key:
             return jsonify({'success': False, 'error': 'API key is required'})
         
+        logger.info(f"Validating API key with mode: {api_mode}")
         meraki_manager.api_mode = api_mode
+        
         if meraki_manager.set_api_key(api_key):
             session['api_key'] = api_key
             session['api_mode'] = api_mode
+            session.permanent = True
+            logger.info(f"API key validated and stored in session. Session ID: {session.get('_permanent', 'N/A')}")
             return jsonify({'success': True})
         else:
+            logger.warning(f"API key validation failed for key ending in: ...{api_key[-4:] if len(api_key) > 4 else 'short'}")
             return jsonify({'success': False, 'error': 'Invalid API key or API connection failed'})
     
     except Exception as e:
         logger.error(f"API key validation error: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/organizations')
 def get_organizations():
     """Get all organizations"""
     try:
-        if 'api_key' not in session:
+        # Check session first, then fallback to current API key
+        if 'api_key' not in session and not meraki_manager.api_key:
+            logger.warning(f"No API key in session. Session keys: {list(session.keys())}")
             return jsonify({'error': 'API key not set'}), 401
         
+        # Use session API key if available, otherwise use current manager key
+        if 'api_key' in session and session['api_key'] != meraki_manager.api_key:
+            meraki_manager.set_api_key(session['api_key'])
+        
         orgs = meraki_manager.get_organizations()
+        if orgs is None:
+            return jsonify({'error': 'Failed to retrieve organizations'}), 500
+            
         return jsonify({'organizations': orgs})
     
     except Exception as e:
@@ -535,6 +756,464 @@ def list_visualizations():
     
     except Exception as e:
         logger.error(f"Visualization list error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Device Live Tools - Speed Test and Throughput Test
+@app.route('/api/devices/<device_serial>/speed_test', methods=['POST'])
+def create_device_speed_test(device_serial):
+    """Create a speed test for a device"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        # Create speed test job
+        result = meraki_manager.create_speed_test(device_serial)
+        
+        if result:
+            return jsonify({
+                'success': True,
+                'speed_test_id': result.get('speedTestId'),
+                'status': result.get('status', 'running'),
+                'url': result.get('url'),
+                'message': 'Speed test initiated successfully'
+            })
+        else:
+            return jsonify({'error': 'Failed to create speed test'}), 500
+    
+    except Exception as e:
+        logger.error(f"Speed test creation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<device_serial>/speed_test/<speed_test_id>')
+def get_device_speed_test_result(device_serial, speed_test_id):
+    """Get speed test results for a device"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        # Get speed test results
+        result = meraki_manager.get_speed_test_result(device_serial, speed_test_id)
+        
+        if result:
+            return jsonify({
+                'success': True,
+                'speed_test_id': speed_test_id,
+                'status': result.get('status'),
+                'results': result.get('results', {}),
+                'download_mbps': result.get('results', {}).get('downloadMbps'),
+                'upload_mbps': result.get('results', {}).get('uploadMbps'),
+                'latency_ms': result.get('results', {}).get('latencyMs'),
+                'jitter_ms': result.get('results', {}).get('jitterMs'),
+                'packet_loss_percent': result.get('results', {}).get('packetLossPercent'),
+                'created_at': result.get('createdAt'),
+                'completed_at': result.get('completedAt')
+            })
+        else:
+            return jsonify({'error': 'Speed test not found or failed'}), 404
+    
+    except Exception as e:
+        logger.error(f"Speed test result error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<device_serial>/throughput_test', methods=['POST'])
+def create_device_throughput_test(device_serial):
+    """Create a throughput test for a device"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        # Create throughput test job
+        result = meraki_manager.create_throughput_test(device_serial)
+        
+        if result:
+            return jsonify({
+                'success': True,
+                'throughput_test_id': result.get('throughputTestId'),
+                'status': result.get('status', 'running'),
+                'url': result.get('url'),
+                'message': 'Throughput test initiated successfully'
+            })
+        else:
+            return jsonify({'error': 'Failed to create throughput test'}), 500
+    
+    except Exception as e:
+        logger.error(f"Throughput test creation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<device_serial>/throughput_test/<throughput_test_id>')
+def get_device_throughput_test_result(device_serial, throughput_test_id):
+    """Get throughput test results for a device"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        # Get throughput test results
+        result = meraki_manager.get_throughput_test_result(device_serial, throughput_test_id)
+        
+        if result:
+            return jsonify({
+                'success': True,
+                'throughput_test_id': throughput_test_id,
+                'status': result.get('status'),
+                'results': result.get('results', {}),
+                'throughput_mbps': result.get('results', {}).get('throughputMbps'),
+                'interface': result.get('results', {}).get('interface'),
+                'created_at': result.get('createdAt'),
+                'completed_at': result.get('completedAt')
+            })
+        else:
+            return jsonify({'error': 'Throughput test not found or failed'}), 404
+    
+    except Exception as e:
+        logger.error(f"Throughput test result error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Additional Live Tools Endpoints
+
+@app.route('/api/devices/<serial>/arp_table', methods=['POST'])
+def create_arp_table_test(serial):
+    """Create ARP table live tool job"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        result = meraki_manager.create_arp_table_test(serial)
+        if result:
+            return jsonify({
+                'success': True,
+                'arp_table_id': result.get('arpTableId'),
+                'status': result.get('status'),
+                'created_at': result.get('createdAt')
+            })
+        else:
+            return jsonify({'error': 'Failed to create ARP table test'}), 500
+    
+    except Exception as e:
+        logger.error(f"ARP table test creation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<serial>/arp_table/<arp_table_id>')
+def get_arp_table_results(serial, arp_table_id):
+    """Get ARP table test results"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        result = meraki_manager.get_arp_table_results(serial, arp_table_id)
+        if result:
+            return jsonify({
+                'success': True,
+                'arp_table_id': arp_table_id,
+                'status': result.get('status'),
+                'results': result.get('results', {}),
+                'entries': result.get('results', {}).get('entries', []),
+                'created_at': result.get('createdAt'),
+                'completed_at': result.get('completedAt')
+            })
+        else:
+            return jsonify({'error': 'ARP table test not found or failed'}), 404
+    
+    except Exception as e:
+        logger.error(f"ARP table result error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<serial>/mac_table', methods=['POST'])
+def create_mac_table_test(serial):
+    """Create MAC table live tool job"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        result = meraki_manager.create_mac_table_test(serial)
+        if result:
+            return jsonify({
+                'success': True,
+                'mac_table_id': result.get('macTableId'),
+                'status': result.get('status'),
+                'created_at': result.get('createdAt')
+            })
+        else:
+            return jsonify({'error': 'Failed to create MAC table test'}), 500
+    
+    except Exception as e:
+        logger.error(f"MAC table test creation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<serial>/mac_table/<mac_table_id>')
+def get_mac_table_results(serial, mac_table_id):
+    """Get MAC table test results"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        result = meraki_manager.get_mac_table_results(serial, mac_table_id)
+        if result:
+            return jsonify({
+                'success': True,
+                'mac_table_id': mac_table_id,
+                'status': result.get('status'),
+                'results': result.get('results', {}),
+                'entries': result.get('results', {}).get('entries', []),
+                'created_at': result.get('createdAt'),
+                'completed_at': result.get('completedAt')
+            })
+        else:
+            return jsonify({'error': 'MAC table test not found or failed'}), 404
+    
+    except Exception as e:
+        logger.error(f"MAC table result error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<serial>/ping', methods=['POST'])
+def create_ping_test(serial):
+    """Create ping live tool job"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        data = request.get_json() or {}
+        target = data.get('target', '8.8.8.8')  # Default to Google DNS
+        count = data.get('count', 5)
+        
+        result = meraki_manager.create_ping_test(serial, target, count)
+        if result:
+            return jsonify({
+                'success': True,
+                'ping_id': result.get('pingId'),
+                'status': result.get('status'),
+                'target': target,
+                'count': count,
+                'created_at': result.get('createdAt')
+            })
+        else:
+            return jsonify({'error': 'Failed to create ping test'}), 500
+    
+    except Exception as e:
+        logger.error(f"Ping test creation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<serial>/ping/<ping_id>')
+def get_ping_results(serial, ping_id):
+    """Get ping test results"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        result = meraki_manager.get_ping_results(serial, ping_id)
+        if result:
+            return jsonify({
+                'success': True,
+                'ping_id': ping_id,
+                'status': result.get('status'),
+                'results': result.get('results', {}),
+                'target': result.get('results', {}).get('target'),
+                'sent': result.get('results', {}).get('sent'),
+                'received': result.get('results', {}).get('received'),
+                'loss_percent': result.get('results', {}).get('lossPercent'),
+                'latencies': result.get('results', {}).get('latencies', []),
+                'created_at': result.get('createdAt'),
+                'completed_at': result.get('completedAt')
+            })
+        else:
+            return jsonify({'error': 'Ping test not found or failed'}), 404
+    
+    except Exception as e:
+        logger.error(f"Ping result error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<serial>/routing_table', methods=['POST'])
+def create_routing_table_test(serial):
+    """Create routing table live tool job"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        result = meraki_manager.create_routing_table_test(serial)
+        if result:
+            return jsonify({
+                'success': True,
+                'routing_table_id': result.get('routingTableId'),
+                'status': result.get('status'),
+                'created_at': result.get('createdAt')
+            })
+        else:
+            return jsonify({'error': 'Failed to create routing table test'}), 500
+    
+    except Exception as e:
+        logger.error(f"Routing table test creation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<serial>/routing_table/<routing_table_id>')
+def get_routing_table_results(serial, routing_table_id):
+    """Get routing table test results"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        result = meraki_manager.get_routing_table_results(serial, routing_table_id)
+        if result:
+            return jsonify({
+                'success': True,
+                'routing_table_id': routing_table_id,
+                'status': result.get('status'),
+                'results': result.get('results', {}),
+                'entries': result.get('results', {}).get('entries', []),
+                'created_at': result.get('createdAt'),
+                'completed_at': result.get('completedAt')
+            })
+        else:
+            return jsonify({'error': 'Routing table test not found or failed'}), 404
+    
+    except Exception as e:
+        logger.error(f"Routing table result error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<serial>/cycle_port', methods=['POST'])
+def create_cycle_port_test(serial):
+    """Create cycle port live tool job"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        data = request.get_json() or {}
+        ports = data.get('ports', [])
+        
+        if not ports:
+            return jsonify({'error': 'Ports parameter is required'}), 400
+        
+        result = meraki_manager.create_cycle_port_test(serial, ports)
+        if result:
+            return jsonify({
+                'success': True,
+                'cycle_port_id': result.get('cyclePortId'),
+                'status': result.get('status'),
+                'ports': ports,
+                'created_at': result.get('createdAt')
+            })
+        else:
+            return jsonify({'error': 'Failed to create cycle port test'}), 500
+    
+    except Exception as e:
+        logger.error(f"Cycle port test creation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<serial>/cycle_port/<cycle_port_id>')
+def get_cycle_port_results(serial, cycle_port_id):
+    """Get cycle port test results"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        result = meraki_manager.get_cycle_port_results(serial, cycle_port_id)
+        if result:
+            return jsonify({
+                'success': True,
+                'cycle_port_id': cycle_port_id,
+                'status': result.get('status'),
+                'results': result.get('results', {}),
+                'ports': result.get('results', {}).get('ports', []),
+                'created_at': result.get('createdAt'),
+                'completed_at': result.get('completedAt')
+            })
+        else:
+            return jsonify({'error': 'Cycle port test not found or failed'}), 404
+    
+    except Exception as e:
+        logger.error(f"Cycle port result error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<serial>/ospf_neighbors', methods=['POST'])
+def create_ospf_neighbors_test(serial):
+    """Create OSPF neighbors live tool job"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        result = meraki_manager.create_ospf_neighbors_test(serial)
+        if result:
+            return jsonify({
+                'success': True,
+                'ospf_neighbors_id': result.get('ospfNeighborsId'),
+                'status': result.get('status'),
+                'created_at': result.get('createdAt')
+            })
+        else:
+            return jsonify({'error': 'Failed to create OSPF neighbors test'}), 500
+    
+    except Exception as e:
+        logger.error(f"OSPF neighbors test creation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<serial>/ospf_neighbors/<ospf_neighbors_id>')
+def get_ospf_neighbors_results(serial, ospf_neighbors_id):
+    """Get OSPF neighbors test results"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        result = meraki_manager.get_ospf_neighbors_results(serial, ospf_neighbors_id)
+        if result:
+            return jsonify({
+                'success': True,
+                'ospf_neighbors_id': ospf_neighbors_id,
+                'status': result.get('status'),
+                'results': result.get('results', {}),
+                'neighbors': result.get('results', {}).get('neighbors', []),
+                'created_at': result.get('createdAt'),
+                'completed_at': result.get('completedAt')
+            })
+        else:
+            return jsonify({'error': 'OSPF neighbors test not found or failed'}), 404
+    
+    except Exception as e:
+        logger.error(f"OSPF neighbors result error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<serial>/dhcp_leases', methods=['POST'])
+def create_dhcp_leases_test(serial):
+    """Create DHCP leases live tool job"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        result = meraki_manager.create_dhcp_leases_test(serial)
+        if result:
+            return jsonify({
+                'success': True,
+                'dhcp_leases_id': result.get('dhcpLeasesId'),
+                'status': result.get('status'),
+                'created_at': result.get('createdAt')
+            })
+        else:
+            return jsonify({'error': 'Failed to create DHCP leases test'}), 500
+    
+    except Exception as e:
+        logger.error(f"DHCP leases test creation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/<serial>/dhcp_leases/<dhcp_leases_id>')
+def get_dhcp_leases_results(serial, dhcp_leases_id):
+    """Get DHCP leases test results"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        result = meraki_manager.get_dhcp_leases_results(serial, dhcp_leases_id)
+        if result:
+            return jsonify({
+                'success': True,
+                'dhcp_leases_id': dhcp_leases_id,
+                'status': result.get('status'),
+                'results': result.get('results', {}),
+                'leases': result.get('results', {}).get('leases', []),
+                'created_at': result.get('createdAt'),
+                'completed_at': result.get('completedAt')
+            })
+        else:
+            return jsonify({'error': 'DHCP leases test not found or failed'}), 404
+    
+    except Exception as e:
+        logger.error(f"DHCP leases result error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # Network Status and Monitoring

@@ -278,6 +278,15 @@
                             </div>
                         </div>
                         <div class="col-md-4 mb-3">
+                            <div class="card feature-card h-100" onclick="showSection('diagnostics')">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-tachometer-alt fa-3x text-danger mb-3"></i>
+                                    <h5>Network Diagnostics</h5>
+                                    <p class="text-muted">Speed tests, throughput tests, and network analysis</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
                             <div class="card feature-card h-100" onclick="showSection('settings')">
                                 <div class="card-body text-center">
                                     <i class="fas fa-cog fa-3x text-dark mb-3"></i>
@@ -307,10 +316,46 @@
             document.querySelectorAll('.nav-link').forEach(link => {
                 link.classList.remove('active');
             });
-            event.target.classList.add('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
 
             // Load section content
             loadSectionContent(sectionName);
+        }
+        
+        // Load content for different sections
+        function loadSectionContent(sectionName) {
+            const dynamicContent = document.getElementById('dynamic-content');
+            
+            switch(sectionName) {
+                case 'dashboard':
+                    dynamicContent.innerHTML = '';
+                    break;
+                case 'network-status':
+                    showNetworkStatusSection();
+                    break;
+                case 'devices':
+                    showDevicesSection();
+                    break;
+                case 'topology':
+                    showTopologySection();
+                    break;
+                case 'environmental':
+                    showEnvironmentalSection();
+                    break;
+                case 'diagnostics':
+                    showDiagnosticsSection();
+                    break;
+                case 'tools':
+                    showToolsSection();
+                    break;
+                case 'settings':
+                    showSettingsSection();
+                    break;
+                default:
+                    dynamicContent.innerHTML = '<div class="alert alert-warning">Section not implemented yet.</div>';
+            }
         }
 
         // Validate API key
@@ -341,7 +386,10 @@
                     currentApiKey = apiKey;
                     showAlert('API key validated successfully!', 'success');
                     document.getElementById('org-network-selection').style.display = 'block';
-                    loadOrganizations();
+                    // Wait a moment for session to be established, then load organizations
+                    setTimeout(() => {
+                        loadOrganizations();
+                    }, 500);
                 } else {
                     showAlert('Invalid API key: ' + result.error, 'danger');
                 }
@@ -356,16 +404,28 @@
                 const response = await fetch('/api/organizations');
                 const result = await response.json();
                 
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to load organizations');
+                }
+                
                 const select = document.getElementById('organizationSelect');
                 select.innerHTML = '<option value="">Select Organization...</option>';
                 
-                result.organizations.forEach(org => {
-                    const option = document.createElement('option');
-                    option.value = org.id;
-                    option.textContent = org.name;
-                    select.appendChild(option);
-                });
+                // Handle both direct array and wrapped response
+                const orgs = result.organizations || result || [];
+                
+                if (Array.isArray(orgs) && orgs.length > 0) {
+                    orgs.forEach(org => {
+                        const option = document.createElement('option');
+                        option.value = org.id;
+                        option.textContent = org.name;
+                        select.appendChild(option);
+                    });
+                } else {
+                    showAlert('No organizations found. Please check your API key.', 'warning');
+                }
             } catch (error) {
+                console.error('Organizations loading error:', error);
                 showAlert('Error loading organizations: ' + error.message, 'danger');
             }
         }
@@ -599,6 +659,795 @@
             } catch (error) {
                 document.getElementById('sslTestResult').innerHTML = 
                     `<div class="alert alert-danger">Error testing SSL: ${error.message}</div>`;
+            }
+        }
+
+        // Network Diagnostics Functions
+        function showDiagnosticsSection() {
+            const content = `
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h2><i class="fas fa-tachometer-alt"></i> Network Diagnostics</h2>
+                                <button class="btn btn-secondary" onclick="showSection('dashboard')">
+                                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Device Selection -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-server"></i> Select Device for Testing</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="diagnosticsNetwork" class="form-label">Network:</label>
+                                        <select class="form-select" id="diagnosticsNetwork" onchange="loadDiagnosticsDevices()">
+                                            <option value="">Select a network...</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="diagnosticsDevice" class="form-label">Device:</label>
+                                        <select class="form-select" id="diagnosticsDevice">
+                                            <option value="">Select a device...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-info-circle"></i> Test Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Speed Test:</strong> Measures download/upload speeds, latency, jitter, and packet loss.</p>
+                                    <p><strong>Throughput Test:</strong> Measures maximum data transfer rate through the device.</p>
+                                    <p class="text-muted"><small>Note: Tests may take 30-60 seconds to complete.</small></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Performance Tests -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-tachometer-alt"></i> Performance Tests</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <button class="btn btn-primary w-100" onclick="startSpeedTest()" id="speedTestBtn">
+                                                <i class="fas fa-rocket"></i> Speed Test
+                                            </button>
+                                            <div id="speedTestResults" class="mt-2"></div>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <button class="btn btn-success w-100" onclick="startThroughputTest()" id="throughputTestBtn">
+                                                <i class="fas fa-chart-bar"></i> Throughput Test
+                                            </button>
+                                            <div id="throughputTestResults" class="mt-2"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Network Analysis Tools -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-network-wired"></i> Network Analysis Tools</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <button class="btn btn-info w-100" onclick="startArpTableTest()" id="arpTableBtn">
+                                                <i class="fas fa-table"></i> ARP Table
+                                            </button>
+                                            <div id="arpTableResults" class="mt-2"></div>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <button class="btn btn-info w-100" onclick="startMacTableTest()" id="macTableBtn">
+                                                <i class="fas fa-list"></i> MAC Table
+                                            </button>
+                                            <div id="macTableResults" class="mt-2"></div>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <button class="btn btn-info w-100" onclick="startRoutingTableTest()" id="routingTableBtn">
+                                                <i class="fas fa-route"></i> Routing Table
+                                            </button>
+                                            <div id="routingTableResults" class="mt-2"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Connectivity Tests -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-wifi"></i> Connectivity & Protocol Tests</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-3 mb-3">
+                                            <div class="input-group mb-2">
+                                                <input type="text" class="form-control" id="pingTarget" placeholder="8.8.8.8" value="8.8.8.8">
+                                                <button class="btn btn-warning" onclick="startPingTest()" id="pingBtn">
+                                                    <i class="fas fa-satellite-dish"></i> Ping
+                                                </button>
+                                            </div>
+                                            <div id="pingResults" class="mt-2"></div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <button class="btn btn-secondary w-100" onclick="startOspfNeighborsTest()" id="ospfBtn">
+                                                <i class="fas fa-project-diagram"></i> OSPF Neighbors
+                                            </button>
+                                            <div id="ospfResults" class="mt-2"></div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <button class="btn btn-dark w-100" onclick="startDhcpLeasesTest()" id="dhcpBtn">
+                                                <i class="fas fa-server"></i> DHCP Leases
+                                            </button>
+                                            <div id="dhcpResults" class="mt-2"></div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="input-group mb-2">
+                                                <input type="text" class="form-control" id="cyclePorts" placeholder="1,2,3">
+                                                <button class="btn btn-danger" onclick="startCyclePortTest()" id="cyclePortBtn">
+                                                    <i class="fas fa-power-off"></i> Cycle Port
+                                                </button>
+                                            </div>
+                                            <div id="cyclePortResults" class="mt-2"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Test History -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-history"></i> Test History</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="testHistory">
+                                        <p class="text-muted">No tests performed yet.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('dynamic-content').innerHTML = content;
+            loadDiagnosticsNetworks();
+        }
+        
+        async function loadDiagnosticsNetworks() {
+            if (!currentApiKey) {
+                showAlert('Please set your API key first', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/organizations');
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to load organizations');
+                }
+                
+                // Handle both direct array and wrapped response
+                const orgs = result.organizations || result || [];
+                
+                if (Array.isArray(orgs) && orgs.length > 0) {
+                    // Load networks for first organization
+                    const networksResponse = await fetch(`/api/networks/${orgs[0].id}`);
+                    const networksResult = await networksResponse.json();
+                    
+                    if (!networksResponse.ok) {
+                        throw new Error(networksResult.error || 'Failed to load networks');
+                    }
+                    
+                    const networkSelect = document.getElementById('diagnosticsNetwork');
+                    networkSelect.innerHTML = '<option value="">Select a network...</option>';
+                    
+                    // Handle both direct array and wrapped response
+                    const networks = networksResult.networks || networksResult || [];
+                    
+                    if (Array.isArray(networks)) {
+                        networks.forEach(network => {
+                            const option = document.createElement('option');
+                            option.value = network.id;
+                            option.textContent = network.name;
+                            networkSelect.appendChild(option);
+                        });
+                    }
+                } else {
+                    showAlert('No organizations found for diagnostics', 'warning');
+                }
+            } catch (error) {
+                console.error('Diagnostics networks loading error:', error);
+                showAlert('Error loading networks: ' + error.message, 'danger');
+            }
+        }
+        
+        async function loadDiagnosticsDevices() {
+            const networkId = document.getElementById('diagnosticsNetwork').value;
+            if (!networkId) return;
+            
+            try {
+                const response = await fetch(`/api/devices/${networkId}`);
+                const devices = await response.json();
+                
+                const deviceSelect = document.getElementById('diagnosticsDevice');
+                deviceSelect.innerHTML = '<option value="">Select a device...</option>';
+                
+                devices.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.serial;
+                    option.textContent = `${device.name || device.model} (${device.serial})`;
+                    deviceSelect.appendChild(option);
+                });
+            } catch (error) {
+                showAlert('Error loading devices: ' + error.message, 'danger');
+            }
+        }
+        
+        async function startSpeedTest() {
+            const deviceSerial = document.getElementById('diagnosticsDevice').value;
+            if (!deviceSerial) {
+                showAlert('Please select a device first', 'warning');
+                return;
+            }
+            
+            const btn = document.getElementById('speedTestBtn');
+            const resultsDiv = document.getElementById('speedTestResults');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting Speed Test...';
+            resultsDiv.innerHTML = '<div class="alert alert-info">Initiating speed test...</div>';
+            
+            try {
+                // Start speed test
+                const response = await fetch(`/api/devices/${deviceSerial}/speed_test`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultsDiv.innerHTML = '<div class="alert alert-info">Speed test running... Please wait 30-60 seconds.</div>';
+                    
+                    // Poll for results
+                    pollSpeedTestResults(deviceSerial, result.speed_test_id);
+                } else {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${result.error}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play"></i> Start Speed Test';
+            }
+        }
+        
+        async function pollSpeedTestResults(deviceSerial, speedTestId) {
+            const resultsDiv = document.getElementById('speedTestResults');
+            let attempts = 0;
+            const maxAttempts = 20; // 2 minutes max
+            
+            const poll = async () => {
+                try {
+                    const response = await fetch(`/api/devices/${deviceSerial}/speed_test/${speedTestId}`);
+                    const result = await response.json();
+                    
+                    if (result.success && result.status === 'complete') {
+                        displaySpeedTestResults(result);
+                        addToTestHistory('Speed Test', result);
+                    } else if (result.status === 'failed') {
+                        resultsDiv.innerHTML = '<div class="alert alert-danger">Speed test failed</div>';
+                    } else if (attempts < maxAttempts) {
+                        attempts++;
+                        setTimeout(poll, 6000); // Poll every 6 seconds
+                    } else {
+                        resultsDiv.innerHTML = '<div class="alert alert-warning">Speed test timed out</div>';
+                    }
+                } catch (error) {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                }
+            };
+            
+            setTimeout(poll, 6000); // Start polling after 6 seconds
+        }
+        
+        function displaySpeedTestResults(result) {
+            const resultsDiv = document.getElementById('speedTestResults');
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-check-circle"></i> Speed Test Complete</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Download:</strong> ${result.download_mbps || 'N/A'} Mbps<br>
+                            <strong>Upload:</strong> ${result.upload_mbps || 'N/A'} Mbps
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Latency:</strong> ${result.latency_ms || 'N/A'} ms<br>
+                            <strong>Jitter:</strong> ${result.jitter_ms || 'N/A'} ms<br>
+                            <strong>Packet Loss:</strong> ${result.packet_loss_percent || 'N/A'}%
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function startThroughputTest() {
+            const deviceSerial = document.getElementById('diagnosticsDevice').value;
+            if (!deviceSerial) {
+                showAlert('Please select a device first', 'warning');
+                return;
+            }
+            
+            const btn = document.getElementById('throughputTestBtn');
+            const resultsDiv = document.getElementById('throughputTestResults');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting Throughput Test...';
+            resultsDiv.innerHTML = '<div class="alert alert-info">Initiating throughput test...</div>';
+            
+            try {
+                // Start throughput test
+                const response = await fetch(`/api/devices/${deviceSerial}/throughput_test`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultsDiv.innerHTML = '<div class="alert alert-info">Throughput test running... Please wait 30-60 seconds.</div>';
+                    
+                    // Poll for results
+                    pollThroughputTestResults(deviceSerial, result.throughput_test_id);
+                } else {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${result.error}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play"></i> Start Throughput Test';
+            }
+        }
+        
+        async function pollThroughputTestResults(deviceSerial, throughputTestId) {
+            const resultsDiv = document.getElementById('throughputTestResults');
+            let attempts = 0;
+            const maxAttempts = 20; // 2 minutes max
+            
+            const poll = async () => {
+                try {
+                    const response = await fetch(`/api/devices/${deviceSerial}/throughput_test/${throughputTestId}`);
+                    const result = await response.json();
+                    
+                    if (result.success && result.status === 'complete') {
+                        displayThroughputTestResults(result);
+                        addToTestHistory('Throughput Test', result);
+                    } else if (result.status === 'failed') {
+                        resultsDiv.innerHTML = '<div class="alert alert-danger">Throughput test failed</div>';
+                    } else if (attempts < maxAttempts) {
+                        attempts++;
+                        setTimeout(poll, 6000); // Poll every 6 seconds
+                    } else {
+                        resultsDiv.innerHTML = '<div class="alert alert-warning">Throughput test timed out</div>';
+                    }
+                } catch (error) {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                }
+            };
+            
+            setTimeout(poll, 6000); // Start polling after 6 seconds
+        }
+        
+        function displayThroughputTestResults(result) {
+            const resultsDiv = document.getElementById('throughputTestResults');
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-check-circle"></i> Throughput Test Complete</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Throughput:</strong> ${result.throughput_mbps || 'N/A'} Mbps
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Interface:</strong> ${result.interface || 'N/A'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function addToTestHistory(testType, result) {
+            const historyDiv = document.getElementById('testHistory');
+            const timestamp = new Date().toLocaleString();
+            
+            if (historyDiv.innerHTML.includes('No tests performed yet')) {
+                historyDiv.innerHTML = '';
+            }
+            
+            const historyItem = document.createElement('div');
+            historyItem.className = 'border-bottom pb-2 mb-2';
+            
+            let resultSummary = '';
+            switch(testType) {
+                case 'Speed Test':
+                    resultSummary = `Download: ${result.download_mbps || 'N/A'} Mbps, Upload: ${result.upload_mbps || 'N/A'} Mbps`;
+                    break;
+                case 'Throughput Test':
+                    resultSummary = `Throughput: ${result.throughput_mbps || 'N/A'} Mbps`;
+                    break;
+                case 'Ping Test':
+                    resultSummary = `Target: ${result.target || 'N/A'}, Loss: ${result.loss_percent || 'N/A'}%`;
+                    break;
+                case 'ARP Table':
+                    resultSummary = `Entries: ${result.entries ? result.entries.length : 'N/A'}`;
+                    break;
+                case 'MAC Table':
+                    resultSummary = `Entries: ${result.entries ? result.entries.length : 'N/A'}`;
+                    break;
+                case 'Routing Table':
+                    resultSummary = `Routes: ${result.entries ? result.entries.length : 'N/A'}`;
+                    break;
+                case 'OSPF Neighbors':
+                    resultSummary = `Neighbors: ${result.neighbors ? result.neighbors.length : 'N/A'}`;
+                    break;
+                case 'DHCP Leases':
+                    resultSummary = `Leases: ${result.leases ? result.leases.length : 'N/A'}`;
+                    break;
+                case 'Cycle Port':
+                    resultSummary = `Ports: ${result.ports ? result.ports.join(', ') : 'N/A'}`;
+                    break;
+                default:
+                    resultSummary = 'Completed';
+            }
+            
+            historyItem.innerHTML = `
+                <div class="d-flex justify-content-between">
+                    <strong>${testType}</strong>
+                    <small class="text-muted">${timestamp}</small>
+                </div>
+                <div class="text-muted">${resultSummary}</div>
+            `;
+            
+            historyDiv.insertBefore(historyItem, historyDiv.firstChild);
+        }
+        
+        // Additional Live Tools Functions
+        
+        async function startArpTableTest() {
+            const deviceSerial = document.getElementById('diagnosticsDevice').value;
+            if (!deviceSerial) {
+                showAlert('Please select a device first', 'warning');
+                return;
+            }
+            
+            const btn = document.getElementById('arpTableBtn');
+            const resultsDiv = document.getElementById('arpTableResults');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+            resultsDiv.innerHTML = '<div class="alert alert-info">Getting ARP table...</div>';
+            
+            try {
+                const response = await fetch(`/api/devices/${deviceSerial}/arp_table`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    pollArpTableResults(deviceSerial, result.arp_table_id);
+                } else {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${result.error}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-table"></i> ARP Table';
+            }
+        }
+        
+        async function pollArpTableResults(deviceSerial, arpTableId) {
+            const resultsDiv = document.getElementById('arpTableResults');
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            const poll = async () => {
+                try {
+                    const response = await fetch(`/api/devices/${deviceSerial}/arp_table/${arpTableId}`);
+                    const result = await response.json();
+                    
+                    if (result.success && result.status === 'complete') {
+                        displayArpTableResults(result);
+                        addToTestHistory('ARP Table', result);
+                    } else if (result.status === 'failed') {
+                        resultsDiv.innerHTML = '<div class="alert alert-danger">ARP table test failed</div>';
+                    } else if (attempts < maxAttempts) {
+                        attempts++;
+                        setTimeout(poll, 3000);
+                    } else {
+                        resultsDiv.innerHTML = '<div class="alert alert-warning">ARP table test timed out</div>';
+                    }
+                } catch (error) {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                }
+            };
+            
+            setTimeout(poll, 3000);
+        }
+        
+        function displayArpTableResults(result) {
+            const resultsDiv = document.getElementById('arpTableResults');
+            const entries = result.entries || [];
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-check-circle"></i> ARP Table Retrieved</h6>
+                    <small>Found ${entries.length} entries</small>
+                </div>
+            `;
+        }
+        
+        async function startMacTableTest() {
+            const deviceSerial = document.getElementById('diagnosticsDevice').value;
+            if (!deviceSerial) {
+                showAlert('Please select a device first', 'warning');
+                return;
+            }
+            
+            const btn = document.getElementById('macTableBtn');
+            const resultsDiv = document.getElementById('macTableResults');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+            resultsDiv.innerHTML = '<div class="alert alert-info">Getting MAC table...</div>';
+            
+            try {
+                const response = await fetch(`/api/devices/${deviceSerial}/mac_table`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    pollMacTableResults(deviceSerial, result.mac_table_id);
+                } else {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${result.error}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-list"></i> MAC Table';
+            }
+        }
+        
+        async function pollMacTableResults(deviceSerial, macTableId) {
+            const resultsDiv = document.getElementById('macTableResults');
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            const poll = async () => {
+                try {
+                    const response = await fetch(`/api/devices/${deviceSerial}/mac_table/${macTableId}`);
+                    const result = await response.json();
+                    
+                    if (result.success && result.status === 'complete') {
+                        displayMacTableResults(result);
+                        addToTestHistory('MAC Table', result);
+                    } else if (result.status === 'failed') {
+                        resultsDiv.innerHTML = '<div class="alert alert-danger">MAC table test failed</div>';
+                    } else if (attempts < maxAttempts) {
+                        attempts++;
+                        setTimeout(poll, 3000);
+                    } else {
+                        resultsDiv.innerHTML = '<div class="alert alert-warning">MAC table test timed out</div>';
+                    }
+                } catch (error) {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                }
+            };
+            
+            setTimeout(poll, 3000);
+        }
+        
+        function displayMacTableResults(result) {
+            const resultsDiv = document.getElementById('macTableResults');
+            const entries = result.entries || [];
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-check-circle"></i> MAC Table Retrieved</h6>
+                    <small>Found ${entries.length} entries</small>
+                </div>
+            `;
+        }
+        
+        async function startPingTest() {
+            const deviceSerial = document.getElementById('diagnosticsDevice').value;
+            const target = document.getElementById('pingTarget').value || '8.8.8.8';
+            
+            if (!deviceSerial) {
+                showAlert('Please select a device first', 'warning');
+                return;
+            }
+            
+            const btn = document.getElementById('pingBtn');
+            const resultsDiv = document.getElementById('pingResults');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ping...';
+            resultsDiv.innerHTML = '<div class="alert alert-info">Running ping test...</div>';
+            
+            try {
+                const response = await fetch(`/api/devices/${deviceSerial}/ping`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target: target, count: 5 })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    pollPingResults(deviceSerial, result.ping_id);
+                } else {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${result.error}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-satellite-dish"></i> Ping';
+            }
+        }
+        
+        async function pollPingResults(deviceSerial, pingId) {
+            const resultsDiv = document.getElementById('pingResults');
+            let attempts = 0;
+            const maxAttempts = 15;
+            
+            const poll = async () => {
+                try {
+                    const response = await fetch(`/api/devices/${deviceSerial}/ping/${pingId}`);
+                    const result = await response.json();
+                    
+                    if (result.success && result.status === 'complete') {
+                        displayPingResults(result);
+                        addToTestHistory('Ping Test', result);
+                    } else if (result.status === 'failed') {
+                        resultsDiv.innerHTML = '<div class="alert alert-danger">Ping test failed</div>';
+                    } else if (attempts < maxAttempts) {
+                        attempts++;
+                        setTimeout(poll, 2000);
+                    } else {
+                        resultsDiv.innerHTML = '<div class="alert alert-warning">Ping test timed out</div>';
+                    }
+                } catch (error) {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                }
+            };
+            
+            setTimeout(poll, 2000);
+        }
+        
+        function displayPingResults(result) {
+            const resultsDiv = document.getElementById('pingResults');
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-check-circle"></i> Ping Complete</h6>
+                    <small>Target: ${result.target || 'N/A'}<br>
+                    Sent: ${result.sent || 'N/A'}, Received: ${result.received || 'N/A'}<br>
+                    Loss: ${result.loss_percent || 'N/A'}%</small>
+                </div>
+            `;
+        }
+        
+        // Add similar functions for other live tools (routing table, OSPF, DHCP, cycle port)
+        async function startRoutingTableTest() {
+            await runGenericLiveToolTest('routing_table', 'routingTableBtn', 'routingTableResults', 'Routing Table');
+        }
+        
+        async function startOspfNeighborsTest() {
+            await runGenericLiveToolTest('ospf_neighbors', 'ospfBtn', 'ospfResults', 'OSPF Neighbors');
+        }
+        
+        async function startDhcpLeasesTest() {
+            await runGenericLiveToolTest('dhcp_leases', 'dhcpBtn', 'dhcpResults', 'DHCP Leases');
+        }
+        
+        async function startCyclePortTest() {
+            const ports = document.getElementById('cyclePorts').value;
+            if (!ports) {
+                showAlert('Please enter port numbers (e.g., 1,2,3)', 'warning');
+                return;
+            }
+            
+            const deviceSerial = document.getElementById('diagnosticsDevice').value;
+            if (!deviceSerial) {
+                showAlert('Please select a device first', 'warning');
+                return;
+            }
+            
+            const btn = document.getElementById('cyclePortBtn');
+            const resultsDiv = document.getElementById('cyclePortResults');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cycling...';
+            resultsDiv.innerHTML = '<div class="alert alert-info">Cycling ports...</div>';
+            
+            try {
+                const portArray = ports.split(',').map(p => p.trim());
+                const response = await fetch(`/api/devices/${deviceSerial}/cycle_port`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ports: portArray })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultsDiv.innerHTML = '<div class="alert alert-success">Port cycle initiated successfully</div>';
+                    addToTestHistory('Cycle Port', { ports: portArray });
+                } else {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${result.error}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-power-off"></i> Cycle Port';
+            }
+        }
+        
+        async function runGenericLiveToolTest(toolType, btnId, resultsId, displayName) {
+            const deviceSerial = document.getElementById('diagnosticsDevice').value;
+            if (!deviceSerial) {
+                showAlert('Please select a device first', 'warning');
+                return;
+            }
+            
+            const btn = document.getElementById(btnId);
+            const resultsDiv = document.getElementById(resultsId);
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+            resultsDiv.innerHTML = `<div class="alert alert-info">Getting ${displayName.toLowerCase()}...</div>`;
+            
+            try {
+                const response = await fetch(`/api/devices/${deviceSerial}/${toolType}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultsDiv.innerHTML = `<div class="alert alert-success">${displayName} test initiated successfully</div>`;
+                    addToTestHistory(displayName, result);
+                } else {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${result.error}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = btn.innerHTML.replace('<i class="fas fa-spinner fa-spin"></i> Running...', btn.getAttribute('data-original-text') || displayName);
             }
         }
 
