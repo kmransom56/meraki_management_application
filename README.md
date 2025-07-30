@@ -29,8 +29,6 @@ cd meraki_management_application
 - **Modern web interface** replacing all CLI functionality
 - **Real-time dashboard** with interactive controls
 - **Enhanced network topology** with D3.js visualizations
-- **One-click Docker deployment** for instant team adoption
-- **Enterprise-grade security** with SSL corporate environment support
 
 ## 🏢 Enterprise Features
 
@@ -151,6 +149,30 @@ python comprehensive_web_app.py
 - **Multi-Organization Support** - Manage multiple Meraki organizations
 - **Device Management** - Configure switches, APs, and security appliances
 - **Environmental Monitoring** - Temperature, power, and connectivity sensors
+
+### 🔍 **Network Diagnostics Suite** ⭐ NEW!
+**Complete Meraki Live Tools integration with enterprise-grade diagnostic capabilities:**
+
+#### 🚀 **Performance Tests**
+- **Speed Test** - Download/upload speeds, latency, jitter, packet loss analysis
+- **Throughput Test** - Maximum data transfer rate measurement
+
+#### 📊 **Network Analysis Tools**
+- **ARP Table** - Address Resolution Protocol table retrieval and analysis
+- **MAC Table** - Media Access Control address table inspection
+- **Routing Table** - Network routing information and path analysis
+
+#### 📡 **Connectivity & Protocol Tests**
+- **Ping Test** - Latency and connectivity testing with customizable targets
+- **OSPF Neighbors** - Open Shortest Path First protocol neighbor discovery
+- **DHCP Leases** - Dynamic Host Configuration Protocol lease monitoring
+- **Cycle Port** - Port power cycling for troubleshooting connectivity issues
+
+**✨ Features:**
+- **Real-time Results** - Live status updates and progress tracking
+- **Intelligent History** - Comprehensive test logging with detailed summaries
+- **Asynchronous Processing** - Background job execution with status polling
+- **Professional UI** - Organized into logical categories with intuitive controls
 
 ### 🔧 **Swiss Army Knife Tools**
 - **Password Generator** - Secure password creation with customizable options
