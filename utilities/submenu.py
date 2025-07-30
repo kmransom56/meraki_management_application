@@ -236,10 +236,59 @@ def submenu_network_wide(api_key):
                 network_id = select_network(api_key, organization_id)
                 if network_id:
                     network_name = meraki_api.get_network_name(api_key, network_id)
-                    topology_data = meraki_api.get_network_topology(api_key, network_id)
-                    if topology_data:
+                    
+                    # Use enhanced visualizer instead of basic topology API
+                    try:
+                        # Import enhanced visualizer
+                        import sys
+                        import os
+                        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                        from enhanced_visualizer import create_enhanced_visualization, build_topology_from_api_data, create_vis_network_data
+                        
+                        # Create SDK dashboard object for enhanced visualizer
+                        import meraki
+                        dashboard = meraki.DashboardAPI(api_key, suppress_logging=True)
+                        
+                        # Fetch data using enhanced methods
+                        print(colored("\n🔍 Fetching network devices and clients...", "cyan"))
+                        devices = dashboard.networks.getNetworkDevices(network_id)
+                        clients = dashboard.networks.getNetworkClients(network_id, timespan=86400)
+                        
+                        # Debug: Print what we got
+                        print(f"📊 Found {len(devices) if isinstance(devices, list) else 0} devices")
+                        print(f"👥 Found {len(clients) if isinstance(clients, list) else 0} clients")
+                        
+                        # Build topology using enhanced method
+                        topology_data = build_topology_from_api_data(devices, clients, links=None)
                         topology_data['network_name'] = network_name
-                        create_web_visualization(topology_data)
+                        
+                        # Convert to visualization format
+                        vis_data = create_vis_network_data(topology_data)
+                        vis_data['network_name'] = network_name
+                        
+                        print(f"🌐 Topology: {len(vis_data.get('nodes', []))} nodes, {len(vis_data.get('edges', []))} connections")
+                        
+                        if vis_data.get('nodes'):
+                            create_web_visualization(vis_data)
+                        else:
+                            print(colored("⚠️ No topology data available for visualization", "yellow"))
+                            
+                    except ImportError as e:
+                        print(colored(f"⚠️ Enhanced visualizer not available: {e}", "yellow"))
+                        print(colored("   Falling back to basic topology API...", "yellow"))
+                        # Fallback to original method
+                        topology_data = meraki_api.get_network_topology(api_key, network_id)
+                        if topology_data:
+                            topology_data['network_name'] = network_name
+                            create_web_visualization(topology_data)
+                    except Exception as e:
+                        print(colored(f"❌ Error with enhanced visualization: {e}", "red"))
+                        logging.exception("Enhanced visualization error")
+                        # Fallback to original method
+                        topology_data = meraki_api.get_network_topology(api_key, network_id)
+                        if topology_data:
+                            topology_data['network_name'] = network_name
+                            create_web_visualization(topology_data)
             input(colored("\nPress Enter to continue...", "green"))
         elif choice == '2':
             organization_id = select_organization(api_key)

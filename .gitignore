@@ -1,0 +1,132 @@
+# Cisco Meraki Web Management Application - .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs and Databases
+*.log
+logs/
+*.db
+*.sqlite3
+*.sqlite
+
+# Configuration and Secrets
+config.ini
+.env
+*.key
+*.pem
+*.crt
+api_keys.txt
+credentials.json
+
+# Docker
+.dockerignore
+
+# Application Specific
+data/
+cache/
+temp/
+tmp/
+visualizations/*.html
+!visualizations/sample_topology.html
+
+# Backup Files
+*.bak
+*.backup
+*.old
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Enterprise Verification Results
+test_results.json
+verification_report.html
+
+# SSL Certificates (keep templates)
+*.crt
+*.key
+*.pem
+!ssl_templates/
+
+# Meraki API Response Cache
+api_cache/
+response_cache.json
+
+# Network Topology Files (generated)
+topology_*.html
+network_*.json
+
+# Windows
+desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.AppleDouble
+.LSOverride
+Icon?
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*

@@ -37,7 +37,6 @@ def index():
             .header {{ color: #1e88e5; border-bottom: 2px solid #1e88e5; padding-bottom: 10px; }}
             .card {{ background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 5px; border-left: 4px solid #1e88e5; }}
             .status {{ color: #28a745; font-weight: bold; }}
-            .command {{ background: #343a40; color: #fff; padding: 15px; border-radius: 5px; font-family: monospace; margin: 10px 0; }}
             .btn {{ background: #1e88e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 5px; display: inline-block; }}
             .btn:hover {{ background: #1565c0; }}
         </style>

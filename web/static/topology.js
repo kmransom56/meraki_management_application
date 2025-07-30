@@ -4,13 +4,12 @@
     let svg;
     let link;
     let node;
-    let width, height; // Define globally
     
     fetch('/topology-data')
         .then(response => response.json())
         .then(data => {
-            width = window.innerWidth - 250;
-            height = window.innerHeight - 60;
+            const width = window.innerWidth - 250;
+            const height = window.innerHeight - 60;
             
             svg = d3.select('#topology')
                 .append('svg')
@@ -103,14 +102,6 @@
             
             // Initial layout
             updateLayout();
-            
-            // Handle window resize
-            window.addEventListener('resize', function() {
-                width = window.innerWidth - 250;
-                height = window.innerHeight - 60;
-                svg.attr('width', width).attr('height', height);
-                updateLayout();
-            });
         });
     
     function getNodeColor(d) {

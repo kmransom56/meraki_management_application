@@ -1,7 +1,9 @@
+version: '3.8'
+
 services:
-  cisco-meraki-cli:
+  cisco-meraki-web:
     build: .
-    container_name: cisco-meraki-cli-app
+    container_name: cisco-meraki-web-app
     ports:
       - "5000:5000"
       - "5001-5010:5001-5010"
@@ -9,29 +11,20 @@ services:
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app
-      - DISPLAY=host.docker.internal:0.0  # For potential GUI apps
+      - WEB_MODE=true
     volumes:
-      # Mount a config directory for user settings
       - ./config:/app/config
-      # Mount a logs directory
       - ./logs:/app/logs
-      # Mount a data directory for any persistent data
       - ./data:/app/data
-      # Mount your existing static files if you have them
-      - ./static:/app/static
-      # Mount your existing templates if you have them
       - ./templates:/app/templates
-      # Mount a folder for visualization outputs
-      - ./outputs:/home/merakiuser/meraki_visualizations
-      # Keep your existing volume mount if you have one
-      - .:/app
+      - ./static:/app/static
+      - ./visualizations:/app/visualizations
     restart: unless-stopped
-    networks:
-      - meraki-network
-
-networks:
-  meraki-network:
-    driver: bridge
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000', timeout=10)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   config:
