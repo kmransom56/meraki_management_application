@@ -375,7 +375,11 @@
         };
 
         // Load topology data
+        {% if viz_id %}
         fetch('/api/visualization/{{ viz_id }}/data')
+        {% else %}
+        fetch('/api/visualization/data')
+        {% endif %}
             .then(response => response.json())
             .then(data => {
                 allNodes = data.nodes || [];

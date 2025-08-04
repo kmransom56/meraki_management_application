@@ -527,10 +527,36 @@ def get_visualization_data():
                 'unknown': {'color': '#9E9E9E', 'width': 1}
             }
         })
-    
     except Exception as e:
         logger.error(f"Error getting visualization data: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/visualization/<network_id>/data')
+def get_network_visualization_data(network_id):
+    """Get actual topology data for a specific network"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        # Use the topology visualizer to get actual network data
+        from utilities.topology_visualizer import create_topology_data
+        
+        # Get devices and clients for the network
+        devices = meraki_manager.get_devices(network_id)
+        clients = meraki_manager.get_clients(network_id)
+        
+        # Create topology data using the existing topology visualizer
+        topology_data = create_topology_data(devices, clients, [])
+        
+        return jsonify(topology_data)
+        
+    except Exception as e:
+        logger.error(f"Error getting network visualization data for {network_id}: {e}")
+        return jsonify({
+            'error': str(e),
+            'nodes': [],
+            'edges': []
+        }), 500
 
 # Multi-Vendor Topology Routes
 @app.route('/api/fortinet/configure', methods=['POST'])
