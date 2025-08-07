@@ -1,0 +1,238 @@
+#!/usr/bin/env python3
+"""
+Environment Setup Script for Cisco Meraki CLI Application
+Helps users configure their .env file with API keys and settings
+"""
+
+import os
+import json
+import getpass
+from pathlib import Path
+
+def create_env_file():
+    """Interactive setup to create .env file"""
+    
+    print("=" * 70)
+    print("CISCO MERAKI CLI - ENVIRONMENT SETUP")
+    print("=" * 70)
+    print("This script will help you configure your environment variables.")
+    print("Press Enter to skip optional settings.\n")
+    
+    env_vars = {}
+    
+    # Meraki Configuration
+    print("📡 MERAKI CONFIGURATION")
+    print("-" * 30)
+    
+    api_key = getpass.getpass("Enter your Meraki API Key: ").strip()
+    if api_key:
+        env_vars['MERAKI_API_KEY'] = api_key
+        print("✅ Meraki API key configured")
+    else:
+        print("⚠️  No Meraki API key provided - you'll need to configure this in the web interface")
+    
+    api_mode = input("API Mode (custom/sdk) [custom]: ").strip().lower()
+    env_vars['MERAKI_API_MODE'] = api_mode if api_mode in ['custom', 'sdk'] else 'custom'
+    
+    # FortiGate Configuration
+    print("\n🔥 FORTIGATE CONFIGURATION (Optional)")
+    print("-" * 40)
+    
+    use_fortimanager = input("Do you use FortiManager? (y/n) [n]: ").strip().lower()
+    if use_fortimanager == 'y':
+        fm_host = input("FortiManager Host/IP: ").strip()
+        fm_username = input("FortiManager Username: ").strip()
+        fm_password = getpass.getpass("FortiManager Password: ").strip()
+        
+        if fm_host and fm_username and fm_password:
+            env_vars['FORTIMANAGER_HOST'] = fm_host
+            env_vars['FORTIMANAGER_USERNAME'] = fm_username
+            env_vars['FORTIMANAGER_PASSWORD'] = fm_password
+            print("✅ FortiManager configuration added")
+    
+    use_direct_fg = input("Do you have direct FortiGate devices? (y/n) [n]: ").strip().lower()
+    if use_direct_fg == 'y':
+        fortigate_devices = []
+        
+        while True:
+            print(f"\nFortiGate Device #{len(fortigate_devices) + 1}")
+            fg_name = input("Device Name: ").strip()
+            if not fg_name:
+                break
+                
+            fg_host = input("Host/IP: ").strip()
+            fg_api_key = getpass.getpass("API Key: ").strip()
+            
+            if fg_host and fg_api_key:
+                fortigate_devices.append({
+                    "name": fg_name,
+                    "host": fg_host,
+                    "api_key": fg_api_key
+                })
+                print(f"✅ Added {fg_name}")
+                
+                another = input("Add another FortiGate device? (y/n) [n]: ").strip().lower()
+                if another != 'y':
+                    break
+            else:
+                print("❌ Invalid configuration, skipping device")
+                break
+        
+        if fortigate_devices:
+            env_vars['FORTIGATE_DEVICES'] = json.dumps(fortigate_devices)
+            print(f"✅ Configured {len(fortigate_devices)} FortiGate devices")
+    
+    # Flask Configuration
+    print("\n🌐 WEB APPLICATION SETTINGS")
+    print("-" * 35)
+    
+    flask_port = input("Web Server Port [5000]: ").strip()
+    env_vars['FLASK_PORT'] = flask_port if flask_port.isdigit() else '5000'
+    
+    flask_host = input("Web Server Host [0.0.0.0]: ").strip()
+    env_vars['FLASK_HOST'] = flask_host if flask_host else '0.0.0.0'
+    
+    flask_debug = input("Enable Debug Mode? (y/n) [n]: ").strip().lower()
+    env_vars['FLASK_DEBUG'] = 'True' if flask_debug == 'y' else 'False'
+    
+    # Generate a random secret key
+    import secrets
+    env_vars['FLASK_SECRET_KEY'] = secrets.token_hex(32)
+    
+    # Application Settings
+    print("\n⚙️  APPLICATION SETTINGS")
+    print("-" * 30)
+    
+    log_level = input("Log Level (DEBUG/INFO/WARNING/ERROR) [INFO]: ").strip().upper()
+    env_vars['LOG_LEVEL'] = log_level if log_level in ['DEBUG', 'INFO', 'WARNING', 'ERROR'] else 'INFO'
+    
+    # QSR Settings
+    print("\n🍔 RESTAURANT SETTINGS (Optional)")
+    print("-" * 40)
+    
+    qsr_mode = input("Enable QSR (Restaurant) device classification? (y/n) [y]: ").strip().lower()
+    env_vars['QSR_MODE'] = 'True' if qsr_mode != 'n' else 'False'
+    
+    if qsr_mode != 'n':
+        location_name = input("Restaurant/Location Name [Restaurant Location]: ").strip()
+        env_vars['QSR_LOCATION_NAME'] = location_name if location_name else 'Restaurant Location'
+    
+    # Write .env file
+    env_file_path = Path('.env')
+    
+    if env_file_path.exists():
+        overwrite = input(f"\n⚠️  .env file already exists. Overwrite? (y/n) [n]: ").strip().lower()
+        if overwrite != 'y':
+            print("❌ Setup cancelled")
+            return False
+    
+    try:
+        with open(env_file_path, 'w') as f:
+            f.write("# Environment Configuration for Cisco Meraki CLI Application\n")
+            f.write("# Generated by setup_env.py\n\n")
+            
+            # Write Meraki settings
+            f.write("# Meraki Configuration\n")
+            f.write(f"MERAKI_API_KEY={env_vars.get('MERAKI_API_KEY', 'your_meraki_api_key_here')}\n")
+            f.write("MERAKI_BASE_URL=https://api.meraki.com/api/v1\n")
+            f.write(f"MERAKI_API_MODE={env_vars.get('MERAKI_API_MODE', 'custom')}\n\n")
+            
+            # Write FortiGate settings
+            f.write("# FortiGate Configuration (Optional)\n")
+            f.write(f"FORTIMANAGER_HOST={env_vars.get('FORTIMANAGER_HOST', '')}\n")
+            f.write(f"FORTIMANAGER_USERNAME={env_vars.get('FORTIMANAGER_USERNAME', '')}\n")
+            f.write(f"FORTIMANAGER_PASSWORD={env_vars.get('FORTIMANAGER_PASSWORD', '')}\n")
+            f.write(f"FORTIGATE_DEVICES={env_vars.get('FORTIGATE_DEVICES', '[]')}\n\n")
+            
+            # Write Flask settings
+            f.write("# Flask Web Application Settings\n")
+            f.write(f"FLASK_HOST={env_vars.get('FLASK_HOST', '0.0.0.0')}\n")
+            f.write(f"FLASK_PORT={env_vars.get('FLASK_PORT', '5000')}\n")
+            f.write(f"FLASK_DEBUG={env_vars.get('FLASK_DEBUG', 'False')}\n")
+            f.write(f"FLASK_SECRET_KEY={env_vars.get('FLASK_SECRET_KEY', 'your_secret_key_here')}\n\n")
+            
+            # Write application settings
+            f.write("# Application Settings\n")
+            f.write(f"LOG_LEVEL={env_vars.get('LOG_LEVEL', 'INFO')}\n")
+            f.write("SSL_VERIFY=True\n")
+            f.write("REQUEST_TIMEOUT=30\n\n")
+            
+            # Write QSR settings
+            f.write("# QSR Settings (Restaurant-specific features)\n")
+            f.write(f"QSR_MODE={env_vars.get('QSR_MODE', 'True')}\n")
+            f.write(f"QSR_LOCATION_NAME={env_vars.get('QSR_LOCATION_NAME', 'Restaurant Location')}\n")
+        
+        print(f"\n✅ Environment file created successfully: {env_file_path.absolute()}")
+        print("\n📋 NEXT STEPS:")
+        print("1. Review the .env file and adjust settings if needed")
+        print("2. Run: python comprehensive_web_app.py")
+        print("3. Open your browser to http://localhost:5000")
+        print("\n🔒 SECURITY NOTE:")
+        print("The .env file contains sensitive information. Do not commit it to version control!")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error creating .env file: {e}")
+        return False
+
+def check_dependencies():
+    """Check if required dependencies are installed"""
+    print("\n🔍 CHECKING DEPENDENCIES")
+    print("-" * 30)
+    
+    required_packages = [
+        'flask',
+        'requests',
+        'python-dotenv'
+    ]
+    
+    missing_packages = []
+    
+    for package in required_packages:
+        try:
+            __import__(package.replace('-', '_'))
+            print(f"✅ {package}")
+        except ImportError:
+            print(f"❌ {package} (missing)")
+            missing_packages.append(package)
+    
+    if missing_packages:
+        print(f"\n⚠️  Missing packages: {', '.join(missing_packages)}")
+        print("Install them with: pip install " + " ".join(missing_packages))
+        return False
+    
+    print("✅ All required dependencies are installed")
+    return True
+
+def main():
+    """Main setup function"""
+    print("Welcome to the Cisco Meraki CLI Environment Setup!")
+    print("This tool will help you configure your application settings.\n")
+    
+    # Check dependencies first
+    if not check_dependencies():
+        install = input("\nWould you like to install missing dependencies? (y/n) [y]: ").strip().lower()
+        if install != 'n':
+            try:
+                import subprocess
+                import sys
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'flask', 'requests', 'python-dotenv'])
+                print("✅ Dependencies installed successfully")
+            except Exception as e:
+                print(f"❌ Failed to install dependencies: {e}")
+                print("Please install them manually: pip install flask requests python-dotenv")
+                return
+        else:
+            print("❌ Cannot proceed without required dependencies")
+            return
+    
+    # Create environment file
+    if create_env_file():
+        print("\n🎉 Setup completed successfully!")
+        print("You can now run the application with: python comprehensive_web_app.py")
+    else:
+        print("\n❌ Setup failed or was cancelled")
+
+if __name__ == "__main__":
+    main()

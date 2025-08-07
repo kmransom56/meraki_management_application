@@ -453,7 +453,9 @@ if app_config['meraki_api_key']:
     meraki_manager.api_mode = app_config['meraki_api_mode']
     if meraki_manager.set_api_key(app_config['meraki_api_key']):
         print("[OK] Meraki API key configured successfully from environment")
-        # Session will be configured when the web interface is accessed
+        # Store in session for web interface
+        session['api_key'] = app_config['meraki_api_key']
+        session['api_mode'] = app_config['meraki_api_mode']
     else:
         print("[WARNING] Failed to validate Meraki API key from environment")
 
@@ -1826,25 +1828,23 @@ def get_multi_vendor_visualization_data(network_id):
         meraki_devices = meraki_manager.get_devices(network_id)
         meraki_clients = meraki_manager.get_clients(network_id)
         
-        # Get FortiGate devices if available
+        # Get comprehensive device inventory from FortiManager if available
+        device_inventory = []
         fortigate_devices = []
         if FORTIGATE_AVAILABLE:
-            # Get devices from FortiManager if configured
+            # Get comprehensive device inventory from FortiManager if configured
             if 'fortimanager_config' in session:
                 config = session['fortimanager_config']
                 fm = FortiManagerAPI(config['host'], config['username'], config['password'])
                 
                 if fm.login():
-                    devices = fm.get_managed_devices()
+                    # Get comprehensive device inventory including connected devices
+                    device_inventory = fm.get_device_inventory()
+                    logger.info(f"Retrieved comprehensive inventory for {len(device_inventory)} devices from FortiManager")
                     
-                    # Add interfaces for each device
-                    for device in devices:
-                        device_name = device.get('name')
-                        if device_name:
-                            interfaces = fm.get_device_interfaces(device_name)
-                            device['interfaces'] = interfaces
+                    # Separate FortiGate devices for backward compatibility
+                    fortigate_devices = [dev for dev in device_inventory if dev.get('group') == 'fortigate']
                     
-                    fortigate_devices.extend(devices)
                     fm.logout()
             
             # Get devices from direct FortiGate connections if configured
@@ -1870,9 +1870,9 @@ def get_multi_vendor_visualization_data(network_id):
                             }
                             fortigate_devices.append(device)
         
-        logger.info(f"Retrieved {len(meraki_devices)} Meraki devices, {len(fortigate_devices)} FortiGate devices, and {len(meraki_clients)} clients")
+        logger.info(f"Retrieved {len(meraki_devices)} Meraki devices, {len(fortigate_devices)} FortiGate devices, {len(meraki_clients)} clients, and {len(device_inventory)} total inventory devices")
         
-        # Build topology data with QSR device classification
+        # Build topology data with comprehensive device inventory and QSR device classification
         topology_data = {
             'nodes': [],
             'edges': [],
@@ -1881,6 +1881,88 @@ def get_multi_vendor_visualization_data(network_id):
         }
         
         classified_devices = []
+        
+        # Process comprehensive device inventory from FortiManager first
+        for device in device_inventory:
+            # Create enhanced node with comprehensive device information
+            node = {
+                'id': device.get('id', f"device_{len(topology_data['nodes'])}"),
+                'label': device.get('name', 'Unknown Device'),
+                'group': device.get('group', 'unknown'),
+                'size': 20 if device.get('group') == 'fortigate' else 16,
+                # Enhanced device information for detailed tooltips
+                'name': device.get('name', 'Unknown'),
+                'hostname': device.get('hostname', 'Unknown'),
+                'ip': device.get('ip', 'N/A'),
+                'mac': device.get('mac', 'N/A'),
+                'serial': device.get('serial', 'N/A'),
+                'model': device.get('model', 'Unknown'),
+                'vendor': device.get('vendor', 'Unknown'),
+                'os': device.get('os_version', device.get('firmware', 'N/A')),
+                'firmware': device.get('firmware', device.get('os_version', 'N/A')),
+                'status': device.get('status', 'Unknown'),
+                'device_type': device.get('device_type', 'Unknown Device'),
+                'device_family': device.get('device_family', 'Unknown'),
+                'uptime': device.get('uptime', 0),
+                'location': device.get('location', ''),
+                'managed_by': device.get('managed_by', 'FortiManager'),
+                'last_seen': device.get('last_seen', 'Unknown'),
+                # VLAN information for enhanced tooltips
+                'vlans': device.get('vlans', []),
+                'interfaces': device.get('interfaces', []),
+                'parent_device': device.get('parent_device'),
+                'title': f"<b>{device.get('device_type', 'Unknown Device')}</b><br>" +
+                        f"Name: {device.get('name', 'Unknown')}<br>" +
+                        f"IP: {device.get('ip', 'N/A')}<br>" +
+                        f"Status: {device.get('status', 'Unknown')}<br>" +
+                        f"Vendor: {device.get('vendor', 'Unknown')}<br>" +
+                        f"Model: {device.get('model', 'Unknown')}"
+            }
+            topology_data['nodes'].append(node)
+            
+            # Store for statistics
+            classified_devices.append({
+                'device_info': device,
+                'classification': {
+                    'device_type': device.get('group', 'unknown'),
+                    'category': device.get('device_family', 'Unknown'),
+                    'display_name': device.get('device_type', 'Unknown Device')
+                }
+            })
+        
+        # Create connections between devices based on FortiManager inventory
+        for device in device_inventory:
+            if device.get('parent_device'):
+                # Find parent device node
+                parent_node = next((n for n in topology_data['nodes'] if n.get('name') == device.get('parent_device')), None)
+                device_node = next((n for n in topology_data['nodes'] if n.get('id') == device.get('id')), None)
+                
+                if parent_node and device_node:
+                    # Determine connection type based on device types
+                    connection_type = 'wired'
+                    if device.get('group') == 'fortiap':
+                        connection_type = 'wireless'
+                    elif device.get('group') == 'switch':
+                        connection_type = 'switch'
+                    elif device.get('group') == 'client':
+                        connection_type = 'wired'
+                    
+                    # Add VLAN information to connection if available
+                    vlan_name = None
+                    if device.get('vlans') and len(device.get('vlans', [])) > 0:
+                        vlan_info = device.get('vlans')[0]
+                        vlan_name = f"{vlan_info.get('name', '')} ({vlan_info.get('id', '')})"
+                    
+                    edge = {
+                        'source': parent_node['id'],
+                        'target': device_node['id'],
+                        'type': connection_type,
+                        'width': 4 if device.get('group') in ['fortigate', 'switch'] else 2,
+                        'dashes': connection_type == 'wireless',
+                        'vlan': device.get('vlans', [{}])[0].get('id') if device.get('vlans') else None,
+                        'vlanName': vlan_name
+                    }
+                    topology_data['edges'].append(edge)
         
         # Process Meraki devices
         for device in meraki_devices:

@@ -709,17 +709,21 @@ def build_topology_from_api_data(devices, clients, links=None):
         device_map[device_id] = device
         
         # Determine device type with better detection
-        device_type = device.get('type', 'unknown').lower()
+        product_type = device.get('productType', '').lower()
         model = device.get('model', '').lower()
         name = device.get('name', '').lower()
         
-        # Improved device type detection
-        if 'mx' in model or 'security appliance' in name or (device_type == 'appliance'):
+        # Improved device type detection based on Meraki API productType
+        if 'appliance' in product_type or 'mx' in model or 'security appliance' in name:
             device_type = 'appliance'  # MX security appliance
-        elif 'mr' in model or 'access point' in name or (device_type == 'wireless'):
+        elif 'wireless' in product_type or 'mr' in model or 'access point' in name:
             device_type = 'wireless'   # Access point
-        elif 'ms' in model or 'switch' in name or (device_type == 'switch'):
+        elif 'switch' in product_type or 'ms' in model or 'switch' in name:
             device_type = 'switch'     # Switch
+        elif 'camera' in product_type or 'mv' in model:
+            device_type = 'camera'     # MV camera
+        else:
+            device_type = 'unknown'
         
         # Create node for device
         node = {

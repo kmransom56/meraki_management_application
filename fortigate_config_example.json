@@ -1,0 +1,63 @@
+{
+  "fortigate_integration": {
+    "description": "Configuration example for FortiGate integration with Meraki topology visualization",
+    "connection_types": {
+      "fortimanager": {
+        "description": "Connect via FortiManager to manage multiple FortiGate devices",
+        "required_fields": ["host", "username", "password"],
+        "example": {
+          "host": "fortimanager.company.com",
+          "username": "admin",
+          "password": "your_password"
+        }
+      },
+      "direct_fortigate": {
+        "description": "Connect directly to individual FortiGate devices",
+        "required_fields": ["host", "api_key", "name"],
+        "example": {
+          "fortigates": [
+            {
+              "name": "Main-Firewall",
+              "host": "192.168.1.1",
+              "api_key": "your_api_key_here"
+            },
+            {
+              "name": "Branch-Firewall", 
+              "host": "10.0.0.1",
+              "api_key": "your_api_key_here"
+            }
+          ]
+        }
+      }
+    },
+    "network_topology": {
+      "description": "Expected network layout for proper visualization",
+      "layout": "Fortigate → Meraki Switch → FortiAP/Endpoints",
+      "connections": [
+        "Fortigate → Meraki Switch → Endpoint devices",
+        "Fortigate → Meraki Switch → FortiAP → Endpoint devices"
+      ]
+    },
+    "api_endpoints": {
+      "configure": "POST /api/fortigate/configure",
+      "test": "POST /api/fortigate/test", 
+      "devices": "GET /api/fortigate/devices",
+      "multi_vendor_topology": "GET /api/visualization/{network_id}/multi-vendor/data"
+    },
+    "device_colors": {
+      "fortigate": "#e74c3c",
+      "meraki_mx": "#1f5582",
+      "meraki_switch": "#28a745",
+      "meraki_ap": "#fd7e14",
+      "fortiap": "#f39c12",
+      "client": "#6c757d"
+    }
+  },
+  "setup_instructions": {
+    "1": "Configure FortiGate API access (generate API key or FortiManager credentials)",
+    "2": "Start the comprehensive web app: python comprehensive_web_app.py",
+    "3": "Navigate to the visualization page",
+    "4": "Use the FortiGate configuration API endpoints to add your devices",
+    "5": "View the multi-vendor topology with proper color coding"
+  }
+}
