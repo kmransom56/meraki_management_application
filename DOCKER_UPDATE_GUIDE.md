@@ -1,4 +1,23 @@
-# Docker Update Instructions for SSL Fixes
+# Docker Update Guide - Enhanced FortiManager Integration
+
+This guide provides instructions for the updated Docker implementation of the Enhanced Cisco Meraki CLI application with comprehensive FortiManager integration, device inventory management, and professional network topology visualization.
+
+## 🚀 New Features in Docker Implementation
+
+### Enhanced Application Features
+- **FortiManager Integration**: Comprehensive device inventory with VLAN information
+- **Device Inventory Table**: Meraki dashboard-style table view with professional styling
+- **Network Topology Visualization**: FortiGate-inspired UI with enhanced tooltips
+- **Multi-Vendor Support**: FortiGate and Cisco Meraki device integration
+- **Professional UI**: FortiGate-inspired design with Lato font family
+- **VLAN Management**: Detailed VLAN information and connection labels
+- **Real-Time Data**: Live device status and comprehensive inventory
+
+### Docker Enhancements
+- **Updated Dependencies**: All required packages for FortiManager integration
+- **Environment Variables**: Comprehensive configuration for multi-vendor environments
+- **Security Improvements**: Enhanced SSL handling for corporate environments
+- **Performance Optimizations**: Improved container startup and resource usage
 
 ## 🐳 Updating Docker Container with SSL Fixes
 

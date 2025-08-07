@@ -9,7 +9,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive \
     UV_CACHE_DIR=/tmp/uv-cache \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    FLASK_APP=app.py \
+    FLASK_ENV=production
 
 # Install system dependencies and uv
 RUN apt-get update && apt-get install -y \
@@ -22,6 +24,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     git \
     ca-certificates \
+    openssh-client \
+    libffi-dev \
+    libssl-dev \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv - much faster than pip
@@ -37,7 +43,7 @@ RUN uv pip install -r requirements.txt --system --native-tls --trusted-host pypi
 COPY . .
 
 # Create necessary directories
-RUN mkdir -p /app/logs /app/data /app/config /app/static /app/templates
+RUN mkdir -p /app/logs /app/data /app/config /app/static /app/templates /app/modules /app/modules/fortigate
 
 # Create a non-root user for security
 RUN useradd --create-home --shell /bin/bash merakiuser && \
@@ -51,5 +57,5 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000', timeout=10)" || exit 1
 
-# Start the comprehensive web application
-CMD ["python", "comprehensive_web_app.py"]
+# Start the enhanced web application with FortiManager integration
+CMD ["python", "app.py"]
