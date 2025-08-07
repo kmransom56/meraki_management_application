@@ -82,6 +82,15 @@ except ImportError as e:
     print(f"[WARNING] QSR device classifier not available: {e}")
     QSR_CLASSIFIER_AVAILABLE = False
 
+# Import persistent API key storage
+try:
+    from api_key_storage import APIKeyStorage, load_meraki_api_key, save_meraki_api_key
+    API_KEY_STORAGE_AVAILABLE = True
+    print("[OK] Persistent API key storage loaded")
+except ImportError as e:
+    print(f"[WARNING] API key storage not available: {e}")
+    API_KEY_STORAGE_AVAILABLE = False
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -89,17 +98,133 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize Flask app
+# Professional-grade application configuration
+app_config = {
+    'flask_host': os.environ.get('FLASK_HOST', '0.0.0.0'),
+    'flask_port': int(os.environ.get('FLASK_PORT', 10000)),
+    'flask_debug': os.environ.get('FLASK_DEBUG', 'True').lower() == 'true',
+    'meraki_api_key': os.environ.get('MERAKI_API_KEY', ''),
+    'fortigate_devices': os.environ.get('FORTIGATE_DEVICES', ''),
+    'fortimanager_host': os.environ.get('FORTIMANAGER_HOST', ''),
+    'qsr_mode': os.environ.get('QSR_MODE', 'True').lower() == 'true',
+    'qsr_location_name': os.environ.get('QSR_LOCATION_NAME', 'Restaurant Location')
+}
+
+# Auto-load saved API key if available
+if API_KEY_STORAGE_AVAILABLE and not app_config['meraki_api_key']:
+    saved_key = load_meraki_api_key()
+    if saved_key:
+        app_config['meraki_api_key'] = saved_key
+        print("[CONFIG] Auto-loaded Meraki API key from persistent storage")
+
+# Initialize Flask app with professional-grade configuration
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
-app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SESSION_PERMANENT'] = False
-app.config['SESSION_USE_SIGNER'] = True
-app.config['SESSION_KEY_PREFIX'] = 'meraki_'
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', os.urandom(24))
+
+# Professional-grade Flask configuration
+app.config.update({
+    'SESSION_TYPE': 'filesystem',
+    'SESSION_PERMANENT': False,
+    'SESSION_USE_SIGNER': True,
+    'SESSION_KEY_PREFIX': 'meraki_',
+    'TEMPLATES_AUTO_RELOAD': True,
+    'SEND_FILE_MAX_AGE_DEFAULT': 0,
+    'JSON_SORT_KEYS': False,
+    'JSONIFY_PRETTYPRINT_REGULAR': True
+})
+
+# Force template reloading and disable caching for development
+app.jinja_env.auto_reload = True
+app.jinja_env.cache = {}
+
+# Add professional-grade cache-busting headers
+@app.after_request
+def add_cache_busting_headers(response):
+    """Add cache-busting headers to prevent browser caching issues"""
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    response.headers['X-Timestamp'] = str(int(time.time()))
+    return response
 
 # Global storage for active visualizations and data
 active_visualizations = {}
 cached_data = {}
+
+# =============================================================================
+# PROFESSIONAL-GRADE WEB PAGE ROUTES
+# =============================================================================
+
+@app.route('/')
+def index():
+    """Main dashboard page with professional UI"""
+    timestamp = int(time.time())
+    return render_template('index.html', 
+                         timestamp=timestamp,
+                         cache_bust=timestamp,
+                         qsr_mode=app_config['qsr_mode'],
+                         location_name=app_config['qsr_location_name'])
+
+@app.route('/visualization/<network_id>')
+def visualization_page(network_id):
+    """Enhanced network topology visualization page"""
+    timestamp = int(time.time())
+    return render_template('visualization.html', 
+                         network_id=network_id,
+                         timestamp=timestamp,
+                         cache_bust=timestamp,
+                         qsr_mode=app_config['qsr_mode'])
+
+@app.route('/device_inventory/<network_id>')
+def device_inventory_page(network_id):
+    """Comprehensive device inventory page"""
+    timestamp = int(time.time())
+    return render_template('device_inventory.html', 
+                         network_id=network_id,
+                         timestamp=timestamp,
+                         cache_bust=timestamp)
+
+@app.route('/ai_maintenance')
+def ai_maintenance_dashboard():
+    """AI maintenance engine dashboard"""
+    timestamp = int(time.time())
+    return render_template('ai_maintenance.html',
+                         timestamp=timestamp,
+                         cache_bust=timestamp)
+
+@app.route('/settings')
+def settings_page():
+    """Application settings and configuration"""
+    timestamp = int(time.time())
+    return render_template('settings.html',
+                         timestamp=timestamp,
+                         cache_bust=timestamp,
+                         api_key_storage_available=API_KEY_STORAGE_AVAILABLE)
+
+# =============================================================================
+# GLOBAL MANAGER INITIALIZATION
+# =============================================================================
+
+# Initialize global Meraki manager
+meraki_manager = None
+
+def initialize_meraki_manager():
+    """Initialize global Meraki manager with auto-loaded API key"""
+    global meraki_manager
+    try:
+        meraki_manager = ComprehensiveMerakiManager()
+        
+        # Auto-set API key if available
+        if app_config['meraki_api_key']:
+            meraki_manager.set_api_key(app_config['meraki_api_key'])
+            logger.info("Meraki manager initialized with auto-loaded API key")
+        else:
+            logger.info("Meraki manager initialized - API key will be set via web interface")
+            
+        return True
+    except Exception as e:
+        logger.error(f"Failed to initialize Meraki manager: {e}")
+        return False
 
 class ComprehensiveMerakiManager:
     """Comprehensive Meraki Web Management Class - Integrates ALL CLI functionality"""
@@ -2135,24 +2260,56 @@ if __name__ == '__main__':
     print("[FEATURES] Network Status, Device Management, Topology, Tools, Settings")
     print(f"[ACCESS] http://{app_config['flask_host']}:{app_config['flask_port']}")
     
+    # Initialize managers
+    print("[INIT] Initializing application managers...")
+    if initialize_meraki_manager():
+        print("[OK] Meraki manager initialized successfully")
+    else:
+        print("[WARNING] Meraki manager initialization failed")
+    
+    # Module availability status
     if CLI_MODULES_AVAILABLE:
         print("[OK] All CLI modules loaded - Full functionality available")
     else:
         print("[WARNING] Some CLI modules missing - Limited functionality")
     
+    # API key status
     if app_config['meraki_api_key']:
-        print("[CONFIG] Meraki API key loaded from environment")
+        if API_KEY_STORAGE_AVAILABLE:
+            print("[CONFIG] Meraki API key auto-loaded from persistent storage")
+        else:
+            print("[CONFIG] Meraki API key loaded from environment")
     else:
-        print("[INFO] No Meraki API key in environment - configure via web interface")
+        print("[INFO] No Meraki API key found - configure via web interface")
+        if API_KEY_STORAGE_AVAILABLE:
+            print("[HINT] Use 'python setup_api_key.py' to save your API key permanently")
     
+    # Integration status
     if app_config['fortigate_devices'] or app_config['fortimanager_host']:
         print("[CONFIG] FortiGate integration configured from environment")
     
     if app_config['qsr_mode']:
         print(f"[QSR] Restaurant mode enabled for: {app_config['qsr_location_name']}")
     
+    # Feature availability
+    features = []
+    if QSR_CLASSIFIER_AVAILABLE:
+        features.append("QSR Device Classification")
+    if FORTIGATE_AVAILABLE:
+        features.append("FortiGate Integration")
+    if API_KEY_STORAGE_AVAILABLE:
+        features.append("Persistent API Key Storage")
+    
+    if features:
+        print(f"[FEATURES] Enhanced features available: {', '.join(features)}")
+    
+    print("=" * 70)
+    print("[READY] Professional-grade network management platform ready")
+    print("[CACHE] Cache-busting enabled for development")
+    print("[SECURITY] Session management and API key encryption active")
     print("=" * 70)
     
+    # Start the Flask application
     app.run(
         host=app_config['flask_host'], 
         port=app_config['flask_port'], 

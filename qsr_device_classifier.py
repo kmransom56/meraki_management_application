@@ -194,10 +194,10 @@ class QSRDeviceClassifier:
         Returns:
             dict: Classification result with device type, category, icon, color
         """
-        device_name = device_info.get('name', '').lower()
-        device_mac = device_info.get('mac', '').upper()
-        device_model = device_info.get('model', '').lower()
-        device_product = device_info.get('productType', '').lower()
+        device_name = (device_info.get('name') or '').lower()
+        device_mac = (device_info.get('mac') or '').upper()
+        device_model = (device_info.get('model') or '').lower()
+        device_product = (device_info.get('productType') or '').lower()
         
         # Check each device pattern
         for device_type, patterns in self.device_patterns.items():

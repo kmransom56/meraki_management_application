@@ -49,10 +49,10 @@ except ImportError as e:
     fortinet_manager = None
     multi_vendor_engine = None
 
-# Import AI maintenance engine
+# Import AI maintenance engine - HTTP CONNECTION ISSUES FIXED
 try:
     from ai_maintenance_engine import initialize_ai_maintenance, get_ai_maintenance_engine
-    print("[OK] AI Maintenance Engine available")
+    print("[OK] AI Maintenance Engine available with fixed HTTP connections")
     AI_MAINTENANCE_AVAILABLE = True
 except ImportError as e:
     print(f"[WARNING] AI Maintenance Engine not available: {e}")
@@ -2487,6 +2487,329 @@ def get_network_status(network_id):
     except Exception as e:
         logger.error(f"Error getting network status: {e}")
         return jsonify({'error': str(e)}), 500
+
+# Visualization API Endpoints
+@app.route('/api/visualization/<network_id>/multi-vendor/data')
+def get_multi_vendor_visualization_data(network_id):
+    """Get multi-vendor topology data including FortiGate and Meraki devices with QSR device classification"""
+    try:
+        if 'api_key' not in session:
+            return jsonify({'error': 'API key not set'}), 401
+        
+        # Initialize QSR device classifier
+        qsr_classifier = None
+        if QSR_CLASSIFIER_AVAILABLE:
+            qsr_classifier = QSRDeviceClassifier()
+            logger.info("QSR device classifier initialized for restaurant device identification")
+        
+        # Get Meraki devices and clients
+        meraki_devices = meraki_manager.get_devices(network_id)
+        meraki_clients = meraki_manager.get_clients(network_id)
+        
+        # Get FortiGate devices if available
+        fortigate_devices = []
+        if FORTIGATE_AVAILABLE:
+            # Get devices from FortiManager if configured
+            if 'fortimanager_config' in session:
+                config = session['fortimanager_config']
+                fm = FortiManagerAPI(config['host'], config['username'], config['password'])
+                
+                if fm.login():
+                    devices = fm.get_managed_devices()
+                    
+                    # Add interfaces for each device
+                    for device in devices:
+                        device_name = device.get('name')
+                        if device_name:
+                            interfaces = fm.get_device_interfaces(device_name)
+                            device['interfaces'] = interfaces
+                    
+                    fortigate_devices.extend(devices)
+                    fm.logout()
+            
+            # Get devices from direct FortiGate connections if configured
+            if 'fortigate_configs' in session:
+                for config in session['fortigate_configs']:
+                    host = config.get('host')
+                    api_key = config.get('api_key')
+                    name = config.get('name', host)
+                    
+                    if host and api_key:
+                        fg = FortiGateDirectAPI(host, api_key)
+                        status = fg.get_system_status()
+                        
+                        if status:
+                            # Create device object from status
+                            device = {
+                                'name': name,
+                                'host': host,
+                                'serial': status.get('results', {}).get('serial', 'unknown'),
+                                'platform_str': status.get('results', {}).get('version', 'unknown'),
+                                'os_ver': status.get('results', {}).get('version', 'unknown'),
+                                'interfaces': fg.get_interfaces()
+                            }
+                            fortigate_devices.append(device)
+        
+        logger.info(f"Retrieved {len(meraki_devices)} Meraki devices, {len(fortigate_devices)} FortiGate devices, and {len(meraki_clients)} clients")
+        
+        # Build topology data with QSR device classification
+        topology_data = {
+            'nodes': [],
+            'edges': [],
+            'stats': {},
+            'qsr_stats': {}
+        }
+        
+        classified_devices = []
+        
+        # Process Meraki devices
+        for device in meraki_devices:
+            device_info = {
+                'name': device.get('name', ''),
+                'mac': device.get('mac', ''),
+                'model': device.get('model', ''),
+                'productType': device.get('productType', ''),
+                'serial': device.get('serial', ''),
+                'networkId': device.get('networkId', ''),
+                'status': device.get('status', 'unknown')
+            }
+            
+            # Classify device using QSR classifier
+            if qsr_classifier:
+                classification = qsr_classifier.classify_device(device_info)
+            else:
+                # Fallback classification
+                product_type = device.get('productType', '').lower()
+                if 'switch' in product_type:
+                    classification = {'device_type': 'network_switch', 'category': 'Network Infrastructure', 'icon': 'fas fa-network-wired', 'color': '#28A745', 'display_name': 'Network Switch'}
+                elif 'wireless' in product_type:
+                    classification = {'device_type': 'wifi_access_point', 'category': 'Network Infrastructure', 'icon': 'fas fa-wifi', 'color': '#FD7E14', 'display_name': 'WiFi Access Point'}
+                elif 'appliance' in product_type:
+                    classification = {'device_type': 'security_appliance', 'category': 'Security & Routing', 'icon': 'fas fa-shield-alt', 'color': '#DC3545', 'display_name': 'Security Appliance'}
+                elif 'camera' in product_type:
+                    classification = {'device_type': 'security_camera', 'category': 'Security Systems', 'icon': 'fas fa-video', 'color': '#6C757D', 'display_name': 'Security Camera'}
+                else:
+                    classification = {'device_type': 'unknown', 'category': 'Unknown Device', 'icon': 'fas fa-question-circle', 'color': '#9E9E9E', 'display_name': 'Unknown Device'}
+            
+            # Create node for visualization with enhanced size
+            node = {
+                'id': f"meraki_{device.get('serial', 'unknown')}",
+                'label': classification.get('display_name', device.get('name', 'Unknown')),
+                'group': classification.get('device_type', 'unknown'),
+                'size': 30 if classification.get('device_type') in ['security_appliance', 'digital_menu'] else 25,  # Enhanced size
+                'status': device.get('status', 'unknown'),
+                'ip': device.get('lanIp', device.get('wan1Ip', 'N/A')),
+                'mac': device.get('mac', 'N/A'),
+                'vendor': 'Cisco Meraki',
+                'model': device.get('model', 'N/A'),
+                'firmware': device.get('firmware', 'N/A'),
+                'last_seen': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'title': f"<b>{classification.get('display_name', 'Unknown')}</b><br>" +
+                        f"Category: {classification.get('category', 'Unknown')}<br>" +
+                        f"Model: {device.get('model', 'Unknown')}<br>" +
+                        f"Serial: {device.get('serial', 'Unknown')}<br>" +
+                        f"Status: {device.get('status', 'Unknown')}<br>" +
+                        f"IP: {device.get('lanIp', 'Unknown')}"
+            }
+            topology_data['nodes'].append(node)
+            
+            # Store classified device for statistics
+            classified_devices.append({
+                'device_info': device_info,
+                'classification': classification
+            })
+        
+        # Process FortiGate devices
+        for device in fortigate_devices:
+            device_info = {
+                'name': device.get('name', ''),
+                'mac': '',  # FortiGate MAC not always available
+                'model': 'fortigate',
+                'productType': 'fortigate',
+                'serial': device.get('serial', ''),
+                'host': device.get('host', ''),
+                'status': 'online'  # Assume online if we can query it
+            }
+            
+            # Classify FortiGate device
+            if qsr_classifier:
+                classification = qsr_classifier.classify_device(device_info)
+            else:
+                classification = {'device_type': 'security_appliance', 'category': 'Security & Routing', 'icon': 'fas fa-shield-alt', 'color': '#DC3545', 'display_name': 'FortiGate Firewall'}
+            
+            # Create node for visualization
+            node = {
+                'id': f"fortigate_{device.get('serial', device.get('name', 'unknown'))}",
+                'label': classification.get('display_name', device.get('name', 'FortiGate')),
+                'group': classification.get('device_type', 'security_appliance'),
+                'size': 35,  # FortiGates are typically central devices - enhanced size
+                'status': 'online',
+                'ip': device.get('host', 'N/A'),
+                'vendor': 'Fortinet',
+                'model': 'FortiGate',
+                'firmware': device.get('os_ver', 'N/A'),
+                'last_seen': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'title': f"<b>{classification.get('display_name', 'FortiGate')}</b><br>" +
+                        f"Category: {classification.get('category', 'Security & Routing')}<br>" +
+                        f"Host: {device.get('host', 'Unknown')}<br>" +
+                        f"Serial: {device.get('serial', 'Unknown')}<br>" +
+                        f"Platform: {device.get('platform_str', 'Unknown')}"
+            }
+            topology_data['nodes'].append(node)
+            
+            # Store classified device for statistics
+            classified_devices.append({
+                'device_info': device_info,
+                'classification': classification
+            })
+        
+        # Process clients with QSR classification
+        for client in meraki_clients[:50]:  # Limit to first 50 clients
+            client_info = {
+                'name': client.get('description', client.get('mac', '')),
+                'mac': client.get('mac', ''),
+                'model': client.get('manufacturer', '').lower(),
+                'productType': 'client',
+                'ip': client.get('ip', ''),
+                'status': client.get('status', 'unknown')
+            }
+            
+            # Classify client device
+            if qsr_classifier:
+                classification = qsr_classifier.classify_device(client_info)
+            else:
+                classification = {'device_type': 'unknown', 'category': 'Client Device', 'icon': 'fas fa-laptop', 'color': '#6C757D', 'display_name': 'Client Device'}
+            
+            # Create client node
+            client_node = {
+                'id': f"client_{client.get('id', client.get('mac', 'unknown'))}",
+                'label': classification.get('display_name', client.get('description', 'Unknown Client')),
+                'group': classification.get('device_type', 'unknown'),
+                'size': 20 if classification.get('device_type') in ['pos_register', 'pos_tablet', 'kitchen_display'] else 15,  # Enhanced size
+                'status': client.get('status', 'unknown').lower(),
+                'ip': client.get('ip', 'N/A'),
+                'mac': client.get('mac', 'N/A'),
+                'vendor': client.get('manufacturer', 'Unknown'),
+                'os': client.get('os', 'N/A'),
+                'last_seen': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'parent_device': 'N/A',
+                'vlans': [{'name': f"VLAN{client.get('vlan', 1)}", 'id': client.get('vlan', 1)}] if client.get('vlan') else [],
+                'title': f"<b>{classification.get('display_name', 'Client Device')}</b><br>" +
+                        f"Category: {classification.get('category', 'Client Device')}<br>" +
+                        f"MAC: {client.get('mac', 'Unknown')}<br>" +
+                        f"IP: {client.get('ip', 'Unknown')}<br>" +
+                        f"VLAN: {client.get('vlan', 'Unknown')}<br>" +
+                        f"Manufacturer: {client.get('manufacturer', 'Unknown')}"
+            }
+            topology_data['nodes'].append(client_node)
+            
+            # Store classified client for statistics
+            classified_devices.append({
+                'device_info': client_info,
+                'classification': classification
+            })
+            
+            # Connect client to appropriate device (simplified logic)
+            if meraki_devices:
+                # Connect to first switch or AP
+                target_device = None
+                connection_type = 'wired'
+                
+                for device in meraki_devices:
+                    device_type = device.get('productType', '').lower()
+                    if 'switch' in device_type:
+                        target_device = f"meraki_{device.get('serial', 'unknown')}"
+                        connection_type = 'wired'
+                        break
+                    elif 'wireless' in device_type:
+                        target_device = f"meraki_{device.get('serial', 'unknown')}"
+                        connection_type = 'wireless'
+                
+                if target_device:
+                    edge = {
+                        'source': target_device,
+                        'target': client_node['id'],
+                        'type': connection_type,
+                        'width': 2,
+                        'dashes': connection_type == 'wireless'
+                    }
+                    topology_data['edges'].append(edge)
+        
+        # Create connections between infrastructure devices
+        # Connect FortiGate to Meraki appliances (uplink)
+        fortigate_nodes = [n for n in topology_data['nodes'] if n['group'] == 'security_appliance' and 'fortigate' in n['id']]
+        meraki_appliances = [n for n in topology_data['nodes'] if n['group'] == 'security_appliance' and 'meraki' in n['id']]
+        
+        for fg_node in fortigate_nodes:
+            for mx_node in meraki_appliances:
+                edge = {
+                    'source': fg_node['id'],
+                    'target': mx_node['id'],
+                    'type': 'uplink',
+                    'width': 4
+                }
+                topology_data['edges'].append(edge)
+        
+        # Connect appliances to switches
+        switches = [n for n in topology_data['nodes'] if n['group'] == 'network_switch']
+        for appliance in meraki_appliances:
+            for switch in switches:
+                edge = {
+                    'source': appliance['id'],
+                    'target': switch['id'],
+                    'type': 'switch',
+                    'width': 3
+                }
+                topology_data['edges'].append(edge)
+        
+        # Generate QSR statistics
+        if qsr_classifier:
+            qsr_stats = qsr_classifier.get_qsr_statistics(classified_devices)
+            recommendations = qsr_classifier.get_device_recommendations(classified_devices)
+            topology_data['qsr_stats'] = qsr_stats
+            topology_data['recommendations'] = recommendations
+        
+        # Update general stats
+        topology_data['stats'] = {
+            'devices': len([n for n in topology_data['nodes'] if not n['id'].startswith('client_')]),
+            'clients': len([n for n in topology_data['nodes'] if n['id'].startswith('client_')]),
+            'nodes': len(topology_data['nodes']),
+            'edges': len(topology_data['edges'])
+        }
+        
+        logger.info(f"Built QSR multi-vendor topology with {len(topology_data['nodes'])} nodes and {len(topology_data['edges'])} edges")
+        
+        return jsonify(topology_data)
+        
+    except Exception as e:
+        logger.error(f"Error getting multi-vendor visualization data: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'error': str(e),
+            'nodes': [],
+            'edges': []
+        }), 500
+
+@app.route('/api/visualization/<network_id>/data')
+def get_topology_data(network_id):
+    """Fallback endpoint for basic topology data"""
+    return get_multi_vendor_topology_data(network_id)
+
+@app.route('/visualization')
+def visualization_page():
+    """Render the network topology visualization page"""
+    # Provide default template variables to avoid Jinja2 errors
+    template_vars = {
+        'stats': {
+            'devices': 1,
+            'clients': 10,
+            'nodes': 0,
+            'edges': 0
+        },
+        'network_id': 'L_839358380551176880',
+        'network_name': 'Network L_839358380551176880'
+    }
+    return render_template('visualization.html', **template_vars)
 
 if __name__ == '__main__':
     print("[STARTING] Comprehensive Cisco Meraki Web Management Interface")

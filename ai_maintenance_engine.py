@@ -9,11 +9,17 @@ import json
 import threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
-import requests
+import urllib.request
+import urllib.error
+import urllib.parse
 from dataclasses import dataclass
 from enum import Enum
 import sqlite3
 import os
+import urllib3
+
+# Disable SSL warnings for localhost connections
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -58,6 +64,9 @@ class AIMaintenanceEngine:
         self.db_path = config.get('db_path', 'ai_maintenance.db')
         self.check_interval = config.get('check_interval', 60)  # seconds
         self.auto_fix_enabled = config.get('auto_fix_enabled', True)
+        
+        # Using urllib instead of requests to avoid assert_hostname compatibility issues
+        # No session configuration needed with urllib
         
         # Initialize database
         self._init_database()
@@ -150,8 +159,31 @@ class AIMaintenanceEngine:
                 logger.error(f"Error in monitoring loop: {e}")
                 time.sleep(10)  # Brief pause before retrying
     
+    def _safe_http_request(self, url: str, timeout: int = 5) -> tuple:
+        """Safe HTTP request method using urllib to avoid assert_hostname issues"""
+        try:
+            # Use urllib instead of requests to completely bypass urllib3 compatibility issues
+            req = urllib.request.Request(url, headers={'User-Agent': 'AI-Maintenance-Engine/1.0'})
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                # Create a simple response-like object
+                class SimpleResponse:
+                    def __init__(self, urllib_response):
+                        self.status_code = urllib_response.getcode()
+                        self.ok = 200 <= self.status_code < 300
+                        self._content = urllib_response.read()
+                        self.text = self._content.decode('utf-8', errors='ignore')
+                    
+                    def json(self):
+                        import json
+                        return json.loads(self.text)
+                
+                return SimpleResponse(response), None
+        except Exception as e:
+            logger.debug(f"HTTP request failed for {url}: {e}")
+            return None, str(e)
+    
     def _check_api_health(self):
-        """Intelligent API health monitoring"""
+        """Intelligent API health monitoring with safe HTTP requests"""
         endpoints = [
             {'url': 'http://localhost:10000/health', 'name': 'Application Health'},
             {'url': 'http://localhost:10000/api/networks', 'name': 'Networks API'},
@@ -161,8 +193,18 @@ class AIMaintenanceEngine:
         for endpoint in endpoints:
             try:
                 start_time = time.time()
-                response = requests.get(endpoint['url'], timeout=10)
+                response, error = self._safe_http_request(endpoint['url'], timeout=5)
                 response_time = time.time() - start_time
+                
+                if error:
+                    # Handle request error
+                    self._create_issue(
+                        IssueType.API_CONNECTIVITY,
+                        IssueSeverity.CRITICAL,
+                        f"Failed to connect to {endpoint['name']}: {error}"
+                    )
+                    self._store_api_metrics(endpoint['name'], 0, 0, False, error)
+                    continue
                 
                 # Store metrics
                 self._store_api_metrics(endpoint['name'], response_time, 
@@ -194,7 +236,10 @@ class AIMaintenanceEngine:
         """AI-powered device health monitoring"""
         try:
             # Get device data from API
-            response = requests.get('http://localhost:10000/api/devices', timeout=10)
+            response, error = self._safe_http_request('http://localhost:10000/api/devices', timeout=5)
+            if error:
+                logger.error(f"Failed to get device data: {error}")
+                return
             if response.ok:
                 devices = response.json()
                 
@@ -223,7 +268,14 @@ class AIMaintenanceEngine:
         """Monitor visualization component health"""
         try:
             # Check if visualization page loads correctly
-            response = requests.get('http://localhost:10000/visualization', timeout=10)
+            response, error = self._safe_http_request('http://localhost:10000/visualization', timeout=5)
+            if error:
+                self._create_issue(
+                    IssueType.VISUALIZATION_ERROR,
+                    IssueSeverity.HIGH,
+                    f"Failed to check visualization health: {error}"
+                )
+                return
             if not response.ok:
                 self._create_issue(
                     IssueType.VISUALIZATION_ERROR,

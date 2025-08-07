@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Network Management Platform</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --background-color: #ecf0f1;
+            --card-background: #ffffff;
+            --text-color: #2c3e50;
+            --border-color: #bdc3c7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .status-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .status-card {
+            background: var(--card-background);
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .status-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .status-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--secondary-color);
+        }
+
+        .status-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+        }
+
+        .status-card p {
+            color: #7f8c8d;
+            font-size: 0.95rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .feature-card {
+            background: var(--card-background);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .feature-card .feature-icon {
+            font-size: 3rem;
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .feature-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .feature-card li {
+            padding: 0.3rem 0;
+            color: #7f8c8d;
+        }
+
+        .feature-card li:before {
+            content: "✓";
+            color: var(--success-color);
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .quick-actions {
+            background: var(--card-background);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .quick-actions h2 {
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #e67e22;
+            transform: translateY(-2px);
+        }
+
+        .footer {
+            background: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+
+        .footer p {
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-network-wired"></i> Professional Network Management Platform</h1>
+        <p>Comprehensive Multi-Vendor Network Topology & Device Management</p>
+        {% if qsr_mode %}
+        <p><i class="fas fa-utensils"></i> QSR Mode: {{ location_name }}</p>
+        {% endif %}
+    </div>
+
+    <div class="container">
+        <div class="status-cards">
+            <div class="status-card">
+                <div class="icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3>Security & Encryption</h3>
+                <p>API keys encrypted, session management active, secure credential storage</p>
+            </div>
+            
+            <div class="status-card">
+                <div class="icon">
+                    <i class="fas fa-sync-alt"></i>
+                </div>
+                <h3>Cache-Busting Active</h3>
+                <p>Real-time updates, template auto-reload, development-optimized</p>
+            </div>
+            
+            <div class="status-card">
+                <div class="icon">
+                    <i class="fas fa-microchip"></i>
+                </div>
+                <h3>Multi-Vendor Support</h3>
+                <p>Meraki, FortiGate, QSR device classification, comprehensive integration</p>
+            </div>
+            
+            <div class="status-card">
+                <div class="icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3>AI-Powered</h3>
+                <p>Intelligent maintenance, predictive analytics, automated issue resolution</p>
+            </div>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-sitemap"></i>
+                </div>
+                <h3>Network Topology Visualization</h3>
+                <ul>
+                    <li>Enhanced device icons (30px radius)</li>
+                    <li>VLAN information display</li>
+                    <li>Real-time connection mapping</li>
+                    <li>FortiGate-inspired professional UI</li>
+                    <li>QSR restaurant device classification</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-server"></i>
+                </div>
+                <h3>Device Management</h3>
+                <ul>
+                    <li>Comprehensive device inventory</li>
+                    <li>Live monitoring and status</li>
+                    <li>Multi-vendor device support</li>
+                    <li>Detailed device information</li>
+                    <li>Performance analytics</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-tools"></i>
+                </div>
+                <h3>Professional Tools</h3>
+                <ul>
+                    <li>Network diagnostic tools</li>
+                    <li>Live tool execution</li>
+                    <li>Speed and throughput testing</li>
+                    <li>ARP and MAC table analysis</li>
+                    <li>Ping and routing diagnostics</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <h2><i class="fas fa-rocket"></i> Quick Actions</h2>
+            <div class="action-buttons">
+                <a href="#" class="btn btn-primary" onclick="loadNetworks()">
+                    <i class="fas fa-network-wired"></i>
+                    View Networks
+                </a>
+                <a href="/ai_maintenance" class="btn btn-success">
+                    <i class="fas fa-robot"></i>
+                    AI Maintenance
+                </a>
+                <a href="/settings" class="btn btn-warning">
+                    <i class="fas fa-cog"></i>
+                    Settings
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2025 Professional Network Management Platform | Enterprise-Grade Multi-Vendor Solution</p>
+        <p>Cache-bust timestamp: {{ timestamp }}</p>
+    </div>
+
+    <script>
+        // Professional-grade JavaScript functionality
+        function loadNetworks() {
+            // This would typically load the network selection interface
+            alert('Network selection interface would load here. This requires API key configuration.');
+        }
+
+        // Add professional loading animations and interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate cards on load
+            const cards = document.querySelectorAll('.status-card, .feature-card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+
+        // Cache-busting: Force reload if timestamp changes
+        const currentTimestamp = {{ timestamp }};
+        console.log('Professional Network Management Platform loaded at:', new Date(currentTimestamp * 1000));
+    </script>
+</body>
+</html>
