@@ -1,8 +1,16 @@
-# Docker Update Guide - Enhanced FortiManager Integration
+# Docker Update Guide - AI-Powered Network Management Platform
 
-This guide provides instructions for the updated Docker implementation of the Enhanced Cisco Meraki CLI application with comprehensive FortiManager integration, device inventory management, and professional network topology visualization.
+This guide provides instructions for the updated Docker implementation of the Enhanced Cisco Meraki CLI application with comprehensive FortiManager integration, device inventory management, professional network topology visualization, and AI-powered maintenance engine.
 
 ## 🚀 New Features in Docker Implementation
+
+### 🤖 AI-Powered Maintenance Engine
+- **Intelligent Monitoring**: 24/7 continuous monitoring of system health and performance
+- **Automated Issue Resolution**: AI-powered auto-fix for common network issues
+- **Predictive Analytics**: Early warning system for potential failures
+- **Professional Dashboard**: Real-time AI maintenance dashboard at `/ai-maintenance`
+- **Performance Optimization**: Continuous system tuning and optimization
+- **Enterprise Logging**: Comprehensive audit trail for compliance
 
 ### Enhanced Application Features
 - **FortiManager Integration**: Comprehensive device inventory with VLAN information

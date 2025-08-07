@@ -42,8 +42,8 @@ RUN uv pip install -r requirements.txt --system --native-tls --trusted-host pypi
 # Copy application code
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p /app/logs /app/data /app/config /app/static /app/templates /app/modules /app/modules/fortigate
+# Create necessary directories for AI maintenance engine
+RUN mkdir -p /app/logs /app/data /app/config /app/static /app/templates /app/modules /app/modules/fortigate /app/data/ai_maintenance
 
 # Create a non-root user for security
 RUN useradd --create-home --shell /bin/bash merakiuser && \

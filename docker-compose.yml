@@ -23,6 +23,14 @@ services:
       # Application Configuration
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
       - DEBUG=${DEBUG:-false}
+      # AI Maintenance Engine Configuration
+      - AI_MAINTENANCE_ENABLED=${AI_MAINTENANCE_ENABLED:-true}
+      - AI_MAINTENANCE_CHECK_INTERVAL=${AI_MAINTENANCE_CHECK_INTERVAL:-30}
+      - AI_MAINTENANCE_AUTO_FIX=${AI_MAINTENANCE_AUTO_FIX:-true}
+      - AI_MAINTENANCE_DB_PATH=${AI_MAINTENANCE_DB_PATH:-/app/data/ai_maintenance.db}
+      # Performance and Monitoring
+      - MONITORING_ENABLED=${MONITORING_ENABLED:-true}
+      - PERFORMANCE_LOGGING=${PERFORMANCE_LOGGING:-true}
     volumes:
       # Mount a config directory for user settings
       - ./config:/app/config
