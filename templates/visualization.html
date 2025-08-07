@@ -404,6 +404,174 @@
         .search-result:last-child {
             border-bottom: none;
         }
+
+        /* Device Inventory Table Styles */
+        .view-tabs {
+            display: flex;
+            border-bottom: 1px solid rgb(var(--background-level2));
+            margin-bottom: 20px;
+            background: rgb(var(--background-level1));
+        }
+
+        .view-tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: rgb(var(--text-secondary));
+            font-family: 'Lato', sans-serif;
+            font-size: 14px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .view-tab.active {
+            color: var(--fortinet-red);
+            border-bottom-color: var(--fortinet-red);
+            font-weight: 500;
+        }
+
+        .view-tab:hover {
+            color: rgb(var(--text-primary));
+            background: rgba(var(--background-level2), 0.3);
+        }
+
+        .view-content {
+            display: none;
+        }
+
+        .view-content.active {
+            display: block;
+        }
+
+        .device-inventory-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Lato', sans-serif;
+            font-size: 13px;
+            background: rgb(var(--background-level1));
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .device-inventory-table thead {
+            background: rgb(var(--background-level2));
+        }
+
+        .device-inventory-table th {
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 500;
+            color: rgb(var(--text-primary));
+            border-bottom: 1px solid rgb(var(--background-level2));
+            white-space: nowrap;
+        }
+
+        .device-inventory-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid rgba(var(--background-level2), 0.5);
+            color: rgb(var(--text-primary));
+            vertical-align: middle;
+        }
+
+        .device-inventory-table tbody tr:hover {
+            background: rgba(var(--background-level2), 0.3);
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-online {
+            background: var(--fortinet-green);
+        }
+
+        .status-offline {
+            background: #dc3545;
+        }
+
+        .status-warning {
+            background: var(--fortinet-orange);
+        }
+
+        .device-type-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .device-fortigate {
+            background: rgba(212, 53, 39, 0.1);
+            color: var(--fortinet-red);
+        }
+
+        .device-switch {
+            background: rgba(40, 167, 69, 0.1);
+            color: var(--fortinet-green);
+        }
+
+        .device-wireless {
+            background: rgba(253, 126, 20, 0.1);
+            color: var(--fortinet-orange);
+        }
+
+        .device-appliance {
+            background: rgba(0, 102, 204, 0.1);
+            color: var(--fortinet-blue);
+        }
+
+        .device-client {
+            background: rgba(108, 117, 125, 0.1);
+            color: #6c757d;
+        }
+
+        .device-unknown {
+            background: rgba(158, 158, 158, 0.1);
+            color: #9e9e9e;
+        }
+
+        .vlan-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            background: rgba(0, 102, 204, 0.1);
+            color: var(--fortinet-blue);
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .table-container {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid rgb(var(--background-level2));
+            border-radius: 6px;
+        }
+
+        .table-search {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .table-search input {
+            flex: 1;
+            max-width: 300px;
+        }
     </style>
 </head>
 <body>
@@ -823,26 +991,130 @@
                         return 250;
                     }, width / 2, height / 2));
             } else if (currentLayout === 'hierarchical') {
+                // Detect site type based on device composition
+                const siteType = detectSiteType(filteredNodes);
+                
                 simulation = d3.forceSimulation(filteredNodes)
                     .force('link', d3.forceLink(filteredLinks).id(d => d.id).distance(120))
                     .force('charge', d3.forceManyBody().strength(-300))
                     .force('center', d3.forceCenter(width / 2, height / 2))
                     .force('y', d3.forceY(d => {
-                        // Internet/Gateway at top
-                        if (d.group === 'internet' || d.label?.toLowerCase().includes('internet')) return height * 0.1;
-                        // FortiGate firewalls
-                        if (d.group === 'fortigate' || d.label?.toLowerCase().includes('fortigate')) return height * 0.25;
-                        // Meraki appliances/switches
-                        if (d.group === 'appliance' || d.group === 'switch') return height * 0.45;
-                        // FortiAP wireless access points
-                        if (d.group === 'fortiap' || d.group === 'wireless') return height * 0.65;
-                        // End devices (clients)
-                        return height * 0.85;
+                        return getSiteSpecificYPosition(d, siteType, height);
                     }).strength(0.5))
                     .force('x', d3.forceX(width / 2).strength(0.1));
             }
 
             simulation.on('tick', ticked);
+        }
+
+        // Detect site type based on device composition
+        function detectSiteType(nodes) {
+            const hasFortiSwitch = nodes.some(node => 
+                node.group === 'switch' && 
+                (node.vendor?.toLowerCase().includes('fortinet') || 
+                 node.label?.toLowerCase().includes('fortiswitch') ||
+                 node.model?.toLowerCase().includes('fortiswitch'))
+            );
+            
+            const hasMerakiSwitch = nodes.some(node => 
+                node.group === 'switch' && 
+                (node.vendor?.toLowerCase().includes('meraki') || 
+                 node.vendor?.toLowerCase().includes('cisco') ||
+                 node.label?.toLowerCase().includes('meraki') ||
+                 node.model?.toLowerCase().includes('ms'))
+            );
+            
+            let siteType;
+            // Determine site type based on switch infrastructure
+            if (hasFortiSwitch && !hasMerakiSwitch) {
+                siteType = 'sonic'; // Sonic uses FortiSwitch
+            } else if (hasMerakiSwitch && !hasFortiSwitch) {
+                siteType = 'arbys_bww'; // Arby's and BWW use Meraki switches
+            } else {
+                // Default to Arby's/BWW layout if mixed or unclear
+                siteType = 'arbys_bww';
+            }
+            
+            // Update site layout indicator
+            updateSiteLayoutIndicator(siteType);
+            
+            return siteType;
+        }
+        
+        // Update site layout indicator
+        function updateSiteLayoutIndicator(siteType) {
+            const layoutInfo = document.querySelector('.layout-info');
+            if (layoutInfo) {
+                const siteNames = {
+                    'sonic': 'Sonic (FortiSwitch)',
+                    'arbys_bww': 'Arby\'s/BWW (Meraki Switch)'
+                };
+                layoutInfo.textContent = `Site Layout: ${siteNames[siteType]}`;
+            }
+        }
+
+        // Get site-specific Y position for hierarchical layout
+        function getSiteSpecificYPosition(device, siteType, height) {
+            const deviceGroup = device.group;
+            const deviceLabel = device.label?.toLowerCase() || '';
+            const deviceVendor = device.vendor?.toLowerCase() || '';
+            const deviceModel = device.model?.toLowerCase() || '';
+            
+            // Internet/Gateway at top for all sites
+            if (deviceGroup === 'internet' || deviceLabel.includes('internet') || deviceLabel.includes('gateway')) {
+                return height * 0.1;
+            }
+            
+            // FortiGate firewalls - second level for all sites
+            if (deviceGroup === 'fortigate' || deviceLabel.includes('fortigate')) {
+                return height * 0.25;
+            }
+            
+            if (siteType === 'sonic') {
+                // Sonic Layout: Internet → FortiGate → FortiSwitch → FortiAP/End Device
+                
+                // FortiSwitch - third level
+                if (deviceGroup === 'switch' && 
+                    (deviceVendor.includes('fortinet') || deviceLabel.includes('fortiswitch') || deviceModel.includes('fortiswitch'))) {
+                    return height * 0.45;
+                }
+                
+                // FortiAP - fourth level
+                if (deviceGroup === 'fortiap' || deviceGroup === 'wireless' || deviceLabel.includes('fortiap')) {
+                    return height * 0.65;
+                }
+                
+                // End devices - fifth level
+                if (deviceGroup === 'client' || deviceGroup === 'unknown') {
+                    return height * 0.85;
+                }
+                
+                // Any other switch types (fallback)
+                if (deviceGroup === 'switch' || deviceGroup === 'appliance') {
+                    return height * 0.45;
+                }
+                
+            } else {
+                // Arby's/BWW Layout: Internet → FortiGate → Meraki Switch → FortiAP/End Device
+                
+                // Meraki Switch - third level
+                if (deviceGroup === 'switch' || deviceGroup === 'appliance') {
+                    return height * 0.45;
+                }
+                
+                // FortiAP and wireless access points - fourth level
+                if (deviceGroup === 'fortiap' || deviceGroup === 'wireless' || deviceLabel.includes('fortiap')) {
+                    return height * 0.65;
+                }
+                
+                // End devices - fifth level
+                if (deviceGroup === 'client' || deviceGroup === 'unknown') {
+                    return height * 0.85;
+                }
+            }
+            
+            // Default positioning for unclassified devices
+            return height * 0.85;
         }
 
         function ticked() {
@@ -1106,7 +1378,14 @@
             node.exit().remove();
             node = node.enter().append('circle')
                 .attr('class', 'node')
-                .attr('r', d => d.size || 20)
+                .attr('r', d => {
+                    // Larger icons for better visibility
+                    if (d.group === 'fortigate') return 25;
+                    if (d.group === 'appliance') return 22;
+                    if (d.group === 'switch') return 20;
+                    if (d.group === 'wireless' || d.group === 'fortiap') return 18;
+                    return d.size || 16;
+                })
                 .attr('fill', d => deviceColors[d.group] || deviceColors.unknown)
                 .attr('stroke', '#fff')
                 .attr('stroke-width', 3)
@@ -1151,6 +1430,144 @@
             );
             
             updateVisualization();
+        }
+
+        // Tab switching functionality
+        function switchView(viewName) {
+            // Update tab buttons
+            document.querySelectorAll('.view-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update view content
+            document.querySelectorAll('.view-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(viewName + '-view').classList.add('active');
+            
+            // If switching to inventory view, populate the table
+            if (viewName === 'inventory') {
+                populateInventoryTable();
+            }
+        }
+        
+        // Populate device inventory table with comprehensive data
+        function populateInventoryTable() {
+            const tableBody = document.getElementById('inventoryTableBody');
+            if (!tableBody) return;
+            
+            tableBody.innerHTML = '';
+            
+            allNodes.forEach(device => {
+                const row = document.createElement('tr');
+                
+                // Status with indicator
+                const statusCell = document.createElement('td');
+                const statusClass = device.status === 'online' ? 'status-online' : 
+                                  device.status === 'offline' ? 'status-offline' : 'status-warning';
+                statusCell.innerHTML = `
+                    <div class="status-indicator">
+                        <span class="status-dot ${statusClass}"></span>
+                        ${device.status || 'Unknown'}
+                    </div>
+                `;
+                row.appendChild(statusCell);
+                
+                // Description/Name
+                const nameCell = document.createElement('td');
+                nameCell.textContent = device.name || device.label || 'Unknown';
+                row.appendChild(nameCell);
+                
+                // Last Seen
+                const lastSeenCell = document.createElement('td');
+                lastSeenCell.textContent = device.last_seen || 'N/A';
+                row.appendChild(lastSeenCell);
+                
+                // Device Type with badge
+                const typeCell = document.createElement('td');
+                const deviceTypeClass = `device-${device.group || 'unknown'}`;
+                typeCell.innerHTML = `
+                    <span class="device-type-badge ${deviceTypeClass}">
+                        ${getDeviceTypeName(device.group)}
+                    </span>
+                `;
+                row.appendChild(typeCell);
+                
+                // MAC Address
+                const macCell = document.createElement('td');
+                macCell.textContent = device.mac || 'N/A';
+                row.appendChild(macCell);
+                
+                // IP Address
+                const ipCell = document.createElement('td');
+                ipCell.textContent = device.ip || device.address || 'N/A';
+                row.appendChild(ipCell);
+                
+                // Connected To (Parent Device)
+                const connectedCell = document.createElement('td');
+                connectedCell.textContent = device.parent_device || 'N/A';
+                row.appendChild(connectedCell);
+                
+                // VLAN Information
+                const vlanCell = document.createElement('td');
+                if (device.vlans && device.vlans.length > 0) {
+                    const vlanBadges = device.vlans.map(vlan => 
+                        `<span class="vlan-badge">${vlan.name || vlan.id}</span>`
+                    ).join(' ');
+                    vlanCell.innerHTML = vlanBadges;
+                } else {
+                    vlanCell.textContent = 'N/A';
+                }
+                row.appendChild(vlanCell);
+                
+                // Vendor
+                const vendorCell = document.createElement('td');
+                vendorCell.textContent = device.vendor || getVendorFromGroup(device.group);
+                row.appendChild(vendorCell);
+                
+                // Model
+                const modelCell = document.createElement('td');
+                modelCell.textContent = device.model || 'N/A';
+                row.appendChild(modelCell);
+                
+                // Firmware/OS
+                const firmwareCell = document.createElement('td');
+                firmwareCell.textContent = device.firmware || device.os || 'N/A';
+                row.appendChild(firmwareCell);
+                
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Filter inventory table based on search and filter criteria
+        function filterInventoryTable() {
+            const searchTerm = document.getElementById('inventorySearch').value.toLowerCase();
+            const filterType = document.getElementById('inventoryFilter').value;
+            const rows = document.querySelectorAll('#inventoryTableBody tr');
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length === 0) return;
+                
+                const deviceName = cells[1].textContent.toLowerCase();
+                const deviceType = cells[3].textContent.toLowerCase();
+                const macAddress = cells[4].textContent.toLowerCase();
+                const ipAddress = cells[5].textContent.toLowerCase();
+                
+                // Check search term match
+                const matchesSearch = searchTerm === '' || 
+                    deviceName.includes(searchTerm) ||
+                    macAddress.includes(searchTerm) ||
+                    ipAddress.includes(searchTerm);
+                
+                // Check filter type match
+                const matchesFilter = filterType === 'all' || 
+                    deviceType.includes(filterType.toLowerCase());
+                
+                // Show/hide row based on matches
+                row.style.display = matchesSearch && matchesFilter ? '' : 'none';
+            });
         }
 
         // Handle window resize
