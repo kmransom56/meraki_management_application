@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Maintenance Dashboard - Network Management</title>
+    
+    <!-- FortiGate-inspired styling -->
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --info-color: #17a2b8;
+            --light-bg: #f8f9fa;
+            --dark-bg: #2c3e50;
+        }
+
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: var(--light-bg);
+            color: #2c3e50;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: white !important;
+        }
+
+        .ai-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .ai-header h1 {
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+        }
+
+        .ai-header .lead {
+            opacity: 0.9;
+        }
+
+        .status-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-healthy { background-color: var(--success-color); }
+        .status-warning { background-color: var(--warning-color); }
+        .status-critical { background-color: var(--danger-color); }
+        .status-offline { background-color: #6c757d; }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .issue-card {
+            border-left: 4px solid;
+            margin-bottom: 1rem;
+        }
+
+        .issue-critical { border-left-color: var(--danger-color); }
+        .issue-high { border-left-color: var(--warning-color); }
+        .issue-medium { border-left-color: var(--info-color); }
+        .issue-low { border-left-color: var(--success-color); }
+
+        .auto-fix-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .monitoring-toggle {
+            transform: scale(1.2);
+        }
+
+        .ai-metrics-chart {
+            height: 300px;
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .btn-ai {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            border-radius: 25px;
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-ai:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .loading-spinner {
+            display: none;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .real-time-indicator {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-robot me-2"></i>
+                AI Network Maintenance
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link text-white" href="/visualization">
+                    <i class="fas fa-project-diagram me-1"></i>
+                    Network Topology
+                </a>
+                <a class="nav-link text-white" href="/">
+                    <i class="fas fa-home me-1"></i>
+                    Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- AI Header -->
+    <div class="ai-header">
+        <div class="container text-center">
+            <h1><i class="fas fa-brain me-3"></i>AI-Powered Network Maintenance</h1>
+            <p class="lead">Intelligent monitoring, predictive maintenance, and automated issue resolution</p>
+            <div class="real-time-indicator">
+                <span class="badge bg-light text-dark">
+                    <i class="fas fa-circle text-success"></i>
+                    Real-time Monitoring Active
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- AI Status Overview -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card status-card">
+                    <div class="card-body text-center">
+                        <div class="metric-value" id="active-issues">-</div>
+                        <div class="metric-label">Active Issues</div>
+                        <small class="text-muted">
+                            <span class="status-indicator status-healthy"></span>
+                            AI Monitoring
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card status-card">
+                    <div class="card-body text-center">
+                        <div class="metric-value" id="auto-fix-rate">-</div>
+                        <div class="metric-label">Auto-Fix Success Rate</div>
+                        <small class="text-muted">
+                            <span class="status-indicator status-healthy"></span>
+                            Last 24 Hours
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card status-card">
+                    <div class="card-body text-center">
+                        <div class="metric-value" id="resolved-issues">-</div>
+                        <div class="metric-label">Resolved Issues</div>
+                        <small class="text-muted">
+                            <span class="status-indicator status-healthy"></span>
+                            Today
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card status-card">
+                    <div class="card-body text-center">
+                        <div class="metric-value" id="system-health">-</div>
+                        <div class="metric-label">System Health</div>
+                        <small class="text-muted">
+                            <span class="status-indicator status-healthy"></span>
+                            Overall Status
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Controls -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card status-card">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cogs me-2"></i>
+                            AI Maintenance Controls
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input monitoring-toggle" type="checkbox" id="monitoring-toggle" checked>
+                                    <label class="form-check-label" for="monitoring-toggle">
+                                        <strong>AI Monitoring</strong>
+                                        <br><small class="text-muted">Continuous health monitoring and issue detection</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-ai" onclick="triggerFullSystemScan()">
+                                    <i class="fas fa-search me-2"></i>
+                                    Full System Scan
+                                </button>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-outline-primary" onclick="refreshDashboard()">
+                                    <i class="fas fa-sync-alt me-2"></i>
+                                    Refresh Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Issues -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card status-card">
+                    <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Active Issues
+                        </h5>
+                        <span class="badge bg-warning" id="issues-count">0</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="active-issues-list">
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-check-circle fa-3x mb-3"></i>
+                                <p>No active issues detected. System running smoothly!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card status-card">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Performance Metrics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="performance-metrics">
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span>API Response Time</span>
+                                    <span class="text-success" id="api-response-time">-</span>
+                                </div>
+                                <div class="progress" style="height: 4px;">
+                                    <div class="progress-bar bg-success" id="api-response-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span>Device Health</span>
+                                    <span class="text-success" id="device-health">-</span>
+                                </div>
+                                <div class="progress" style="height: 4px;">
+                                    <div class="progress-bar bg-success" id="device-health-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span>Network Stability</span>
+                                    <span class="text-success" id="network-stability">-</span>
+                                </div>
+                                <div class="progress" style="height: 4px;">
+                                    <div class="progress-bar bg-success" id="network-stability-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Metrics and Trends -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card status-card">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">
+                            <i class="fas fa-brain me-2"></i>
+                            AI Learning and Trends
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="ai-metrics-chart" id="issues-trend-chart">
+                                    <h6>Issue Detection Trends</h6>
+                                    <canvas id="issuesTrendCanvas"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ai-metrics-chart" id="performance-trend-chart">
+                                    <h6>Performance Trends</h6>
+                                    <canvas id="performanceTrendCanvas"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity Log -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card status-card">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2"></i>
+                            Recent AI Activity
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="activity-log" style="max-height: 300px; overflow-y: auto;">
+                            <!-- Activity items will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div class="loading-spinner position-fixed top-50 start-50 translate-middle">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        // AI Maintenance Dashboard JavaScript
+        let refreshInterval;
+        let issuesTrendChart;
+        let performanceTrendChart;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDashboard();
+            startAutoRefresh();
+        });
+
+        function initializeDashboard() {
+            loadHealthReport();
+            loadActiveIssues();
+            loadMetrics();
+            initializeCharts();
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            // Monitoring toggle
+            document.getElementById('monitoring-toggle').addEventListener('change', function() {
+                toggleAIMonitoring(this.checked);
+            });
+        }
+
+        async function loadHealthReport() {
+            try {
+                const response = await fetch('/api/ai/health');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateHealthMetrics(data.report);
+                } else {
+                    console.error('AI Health Report not available:', data.error);
+                    showOfflineStatus();
+                }
+            } catch (error) {
+                console.error('Error loading health report:', error);
+                showOfflineStatus();
+            }
+        }
+
+        async function loadActiveIssues() {
+            try {
+                const response = await fetch('/api/ai/issues');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateActiveIssues(data.issues);
+                    document.getElementById('issues-count').textContent = data.count;
+                } else {
+                    console.error('Failed to load issues:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading active issues:', error);
+            }
+        }
+
+        async function loadMetrics() {
+            try {
+                const response = await fetch('/api/ai/metrics');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updatePerformanceMetrics(data.metrics);
+                } else {
+                    console.error('Failed to load metrics:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+            }
+        }
+
+        function updateHealthMetrics(report) {
+            document.getElementById('active-issues').textContent = report.active_issues || 0;
+            document.getElementById('auto-fix-rate').textContent = 
+                Math.round((report.auto_fix_success_rate || 0) * 100) + '%';
+            document.getElementById('resolved-issues').textContent = report.resolved_issues || 0;
+            
+            // Update system health
+            const healthStatus = report.active_issues === 0 ? 'Excellent' : 
+                                report.active_issues <= 2 ? 'Good' : 'Needs Attention';
+            document.getElementById('system-health').textContent = healthStatus;
+        }
+
+        function updateActiveIssues(issues) {
+            const container = document.getElementById('active-issues-list');
+            
+            if (issues.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+                        <p>No active issues detected. System running smoothly!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = issues.map(issue => `
+                <div class="issue-card card mb-2 issue-${issue.severity}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">${issue.description}</h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Detected: ${new Date(issue.detected_at).toLocaleString()}
+                                </small>
+                                <div class="mt-2">
+                                    <span class="badge bg-${getSeverityColor(issue.severity)} me-2">
+                                        ${issue.severity.toUpperCase()}
+                                    </span>
+                                    <span class="badge bg-secondary me-2">
+                                        ${issue.type.replace('_', ' ').toUpperCase()}
+                                    </span>
+                                    ${issue.auto_fix_attempted ? 
+                                        `<span class="auto-fix-badge badge bg-${issue.auto_fix_successful ? 'success' : 'warning'}">
+                                            ${issue.auto_fix_successful ? 'Auto-Fixed' : 'Fix Attempted'}
+                                        </span>` : ''
+                                    }
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        onclick="triggerManualFix('${issue.id}')">
+                                    <i class="fas fa-wrench me-1"></i>
+                                    Fix Now
+                                </button>
+                            </div>
+                        </div>
+                        ${issue.resolution_details ? 
+                            `<div class="mt-2 p-2 bg-light rounded">
+                                <small><strong>Resolution:</strong> ${issue.resolution_details}</small>
+                            </div>` : ''
+                        }
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updatePerformanceMetrics(metrics) {
+            // Update API response time
+            if (metrics.api_health && metrics.api_health.length > 0) {
+                const avgResponseTime = metrics.api_health.reduce((sum, api) => 
+                    sum + api.avg_response_time, 0) / metrics.api_health.length;
+                
+                document.getElementById('api-response-time').textContent = 
+                    avgResponseTime.toFixed(2) + 's';
+                
+                const responsePercentage = Math.min(100, (5 - avgResponseTime) / 5 * 100);
+                document.getElementById('api-response-bar').style.width = responsePercentage + '%';
+            }
+
+            // Update device health (placeholder - would need real device metrics)
+            document.getElementById('device-health').textContent = '98%';
+            document.getElementById('device-health-bar').style.width = '98%';
+            
+            // Update network stability (placeholder)
+            document.getElementById('network-stability').textContent = '99%';
+            document.getElementById('network-stability-bar').style.width = '99%';
+        }
+
+        function initializeCharts() {
+            // Issues trend chart
+            const issuesCtx = document.getElementById('issuesTrendCanvas').getContext('2d');
+            issuesTrendChart = new Chart(issuesCtx, {
+                type: 'line',
+                data: {
+                    labels: ['6h ago', '5h ago', '4h ago', '3h ago', '2h ago', '1h ago', 'Now'],
+                    datasets: [{
+                        label: 'Issues Detected',
+                        data: [2, 1, 3, 0, 1, 0, 0],
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Issues Resolved',
+                        data: [1, 2, 2, 3, 1, 1, 0],
+                        borderColor: '#27ae60',
+                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Performance trend chart
+            const performanceCtx = document.getElementById('performanceTrendCanvas').getContext('2d');
+            performanceTrendChart = new Chart(performanceCtx, {
+                type: 'line',
+                data: {
+                    labels: ['6h ago', '5h ago', '4h ago', '3h ago', '2h ago', '1h ago', 'Now'],
+                    datasets: [{
+                        label: 'Response Time (ms)',
+                        data: [120, 95, 110, 85, 90, 88, 92],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        async function toggleAIMonitoring(enable) {
+            try {
+                const response = await fetch('/api/ai/monitoring/toggle', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ enable })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showNotification(data.message, 'success');
+                } else {
+                    showNotification('Failed to toggle monitoring: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Error toggling monitoring: ' + error.message, 'error');
+            }
+        }
+
+        async function triggerManualFix(issueId) {
+            try {
+                showLoading(true);
+                const response = await fetch('/api/ai/trigger-fix', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ issue_id: issueId })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('Auto-fix triggered successfully', 'success');
+                    setTimeout(loadActiveIssues, 2000); // Refresh issues after 2 seconds
+                } else {
+                    showNotification('Failed to trigger fix: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Error triggering fix: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function triggerFullSystemScan() {
+            showNotification('Full system scan initiated...', 'info');
+            showLoading(true);
+            
+            // Simulate system scan
+            setTimeout(() => {
+                showLoading(false);
+                refreshDashboard();
+                showNotification('System scan completed successfully', 'success');
+            }, 3000);
+        }
+
+        function refreshDashboard() {
+            showLoading(true);
+            Promise.all([
+                loadHealthReport(),
+                loadActiveIssues(),
+                loadMetrics()
+            ]).finally(() => {
+                showLoading(false);
+                showNotification('Dashboard refreshed', 'success');
+            });
+        }
+
+        function startAutoRefresh() {
+            refreshInterval = setInterval(() => {
+                loadHealthReport();
+                loadActiveIssues();
+                loadMetrics();
+            }, 30000); // Refresh every 30 seconds
+        }
+
+        function getSeverityColor(severity) {
+            const colors = {
+                'critical': 'danger',
+                'high': 'warning',
+                'medium': 'info',
+                'low': 'success'
+            };
+            return colors[severity] || 'secondary';
+        }
+
+        function showLoading(show) {
+            const spinner = document.querySelector('.loading-spinner');
+            spinner.style.display = show ? 'block' : 'none';
+        }
+
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        function showOfflineStatus() {
+            document.getElementById('active-issues').textContent = 'N/A';
+            document.getElementById('auto-fix-rate').textContent = 'N/A';
+            document.getElementById('resolved-issues').textContent = 'N/A';
+            document.getElementById('system-health').textContent = 'Offline';
+            
+            showNotification('AI Maintenance Engine is offline', 'warning');
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

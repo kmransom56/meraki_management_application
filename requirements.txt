@@ -40,9 +40,16 @@ pyyaml>=6.0.1
 toml>=0.10.2
 fuzzy>=1.2.2
 
-# Testing framework
-pytest>=8.0.0
-pytest-cov>=4.1.0
+# Testing and development
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# AI Maintenance Engine dependencies
+sqlite3  # Built-in Python module
+threading  # Built-in Python module
+dataclasses  # Built-in Python module (Python 3.7+)
+enum34>=1.1.10  # For older Python versions
+typing-extensions>=4.0.0  # Enhanced typing support
 
 # Additional security-focused packages
 cryptography>=42.0.0

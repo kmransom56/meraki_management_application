@@ -49,6 +49,15 @@ except ImportError as e:
     fortinet_manager = None
     multi_vendor_engine = None
 
+# Import AI maintenance engine
+try:
+    from ai_maintenance_engine import initialize_ai_maintenance, get_ai_maintenance_engine
+    print("[OK] AI Maintenance Engine available")
+    AI_MAINTENANCE_AVAILABLE = True
+except ImportError as e:
+    print(f"[WARNING] AI Maintenance Engine not available: {e}")
+    AI_MAINTENANCE_AVAILABLE = False
+
 # Import FortiGate integration
 try:
     from modules.fortigate import FortiManagerAPI, FortiGateDirectAPI, build_fortigate_topology_data
@@ -2171,6 +2180,275 @@ def get_multi_vendor_visualization_data(network_id):
             'edges': []
         }), 500
 
+# =============================================================================
+# AI MAINTENANCE ENGINE INTEGRATION
+# =============================================================================
+
+# Initialize AI Maintenance Engine
+ai_maintenance_engine = None
+
+def initialize_ai_maintenance_on_startup():
+    """Initialize AI maintenance engine on Flask startup"""
+    global ai_maintenance_engine
+    if AI_MAINTENANCE_AVAILABLE:
+        try:
+            ai_maintenance_engine = initialize_ai_maintenance()
+            logger.info("AI Maintenance Engine initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize AI Maintenance Engine: {e}")
+    else:
+        logger.warning("AI Maintenance Engine not available")
+
+# AI Maintenance API Endpoints
+@app.route('/api/ai/health')
+def get_ai_health_report():
+    """Get comprehensive AI health report"""
+    try:
+        if not AI_MAINTENANCE_AVAILABLE or not ai_maintenance_engine:
+            return jsonify({
+                'error': 'AI Maintenance Engine not available',
+                'available': False
+            }), 503
+        
+        health_report = ai_maintenance_engine.get_health_report()
+        return jsonify({
+            'success': True,
+            'available': True,
+            'report': health_report
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting AI health report: {e}")
+        return jsonify({
+            'error': str(e),
+            'available': AI_MAINTENANCE_AVAILABLE
+        }), 500
+
+@app.route('/api/ai/issues')
+def get_active_issues():
+    """Get active issues detected by AI"""
+    try:
+        if not AI_MAINTENANCE_AVAILABLE or not ai_maintenance_engine:
+            return jsonify({
+                'error': 'AI Maintenance Engine not available',
+                'issues': []
+            }), 503
+        
+        # Get active issues
+        active_issues = [issue for issue in ai_maintenance_engine.issues if not issue.resolved_at]
+        
+        issues_data = []
+        for issue in active_issues:
+            issues_data.append({
+                'id': issue.id,
+                'type': issue.type.value,
+                'severity': issue.severity.value,
+                'description': issue.description,
+                'detected_at': issue.detected_at.isoformat(),
+                'auto_fix_attempted': issue.auto_fix_attempted,
+                'auto_fix_successful': issue.auto_fix_successful,
+                'resolution_details': issue.resolution_details
+            })
+        
+        return jsonify({
+            'success': True,
+            'issues': issues_data,
+            'count': len(issues_data)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting active issues: {e}")
+        return jsonify({
+            'error': str(e),
+            'issues': []
+        }), 500
+
+@app.route('/api/ai/trigger-fix', methods=['POST'])
+def trigger_manual_fix():
+    """Manually trigger AI auto-fix for specific issue"""
+    try:
+        if not AI_MAINTENANCE_AVAILABLE or not ai_maintenance_engine:
+            return jsonify({
+                'error': 'AI Maintenance Engine not available'
+            }), 503
+        
+        data = request.get_json()
+        issue_id = data.get('issue_id')
+        
+        if not issue_id:
+            return jsonify({'error': 'Issue ID required'}), 400
+        
+        # Find the issue
+        issue = next((i for i in ai_maintenance_engine.issues if i.id == issue_id), None)
+        if not issue:
+            return jsonify({'error': 'Issue not found'}), 404
+        
+        # Reset auto-fix status to allow retry
+        issue.auto_fix_attempted = False
+        issue.auto_fix_successful = False
+        issue.resolution_details = None
+        
+        # Trigger auto-fix
+        ai_maintenance_engine._auto_fix_issues()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Auto-fix triggered for issue {issue_id}',
+            'auto_fix_attempted': issue.auto_fix_attempted,
+            'auto_fix_successful': issue.auto_fix_successful,
+            'resolution_details': issue.resolution_details
+        })
+        
+    except Exception as e:
+        logger.error(f"Error triggering manual fix: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/ai/monitoring/toggle', methods=['POST'])
+def toggle_ai_monitoring():
+    """Toggle AI monitoring on/off"""
+    try:
+        if not AI_MAINTENANCE_AVAILABLE or not ai_maintenance_engine:
+            return jsonify({
+                'error': 'AI Maintenance Engine not available'
+            }), 503
+        
+        data = request.get_json()
+        enable = data.get('enable', not ai_maintenance_engine.monitoring_active)
+        
+        if enable and not ai_maintenance_engine.monitoring_active:
+            ai_maintenance_engine.start_monitoring()
+            message = "AI monitoring started"
+        elif not enable and ai_maintenance_engine.monitoring_active:
+            ai_maintenance_engine.stop_monitoring()
+            message = "AI monitoring stopped"
+        else:
+            message = f"AI monitoring already {'active' if enable else 'inactive'}"
+        
+        return jsonify({
+            'success': True,
+            'message': message,
+            'monitoring_active': ai_maintenance_engine.monitoring_active
+        })
+        
+    except Exception as e:
+        logger.error(f"Error toggling AI monitoring: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/ai/metrics')
+def get_ai_metrics():
+    """Get AI maintenance metrics and statistics"""
+    try:
+        if not AI_MAINTENANCE_AVAILABLE or not ai_maintenance_engine:
+            return jsonify({
+                'error': 'AI Maintenance Engine not available',
+                'metrics': {}
+            }), 503
+        
+        # Get metrics from database
+        import sqlite3
+        metrics = {
+            'api_health': [],
+            'device_metrics': [],
+            'issue_trends': []
+        }
+        
+        try:
+            with sqlite3.connect(ai_maintenance_engine.db_path) as conn:
+                # Get recent API health metrics
+                cursor = conn.execute('''
+                    SELECT endpoint, AVG(response_time) as avg_time, 
+                           COUNT(*) as count, 
+                           SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as success_count
+                    FROM api_health 
+                    WHERE timestamp > datetime('now', '-1 hour')
+                    GROUP BY endpoint
+                ''')
+                
+                for row in cursor.fetchall():
+                    endpoint, avg_time, count, success_count = row
+                    metrics['api_health'].append({
+                        'endpoint': endpoint,
+                        'avg_response_time': round(avg_time, 3) if avg_time else 0,
+                        'total_requests': count,
+                        'success_rate': round(success_count / count, 3) if count > 0 else 0
+                    })
+                
+                # Get device health trends
+                cursor = conn.execute('''
+                    SELECT device_id, status, COUNT(*) as count
+                    FROM device_metrics 
+                    WHERE timestamp > datetime('now', '-1 hour')
+                    GROUP BY device_id, status
+                ''')
+                
+                device_status = {}
+                for row in cursor.fetchall():
+                    device_id, status, count = row
+                    if device_id not in device_status:
+                        device_status[device_id] = {}
+                    device_status[device_id][status] = count
+                
+                metrics['device_metrics'] = device_status
+        
+        except Exception as db_error:
+            logger.error(f"Database error in AI metrics: {db_error}")
+        
+        return jsonify({
+            'success': True,
+            'metrics': metrics,
+            'monitoring_active': ai_maintenance_engine.monitoring_active,
+            'auto_fix_enabled': ai_maintenance_engine.auto_fix_enabled
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting AI metrics: {e}")
+        return jsonify({
+            'error': str(e),
+            'metrics': {}
+        }), 500
+
+# Health check endpoint for AI monitoring
+@app.route('/health')
+def health_check():
+    """Application health check endpoint"""
+    try:
+        # Basic health checks
+        health_status = {
+            'status': 'healthy',
+            'timestamp': datetime.now().isoformat(),
+            'version': '2.0.0',
+            'components': {
+                'flask_app': 'healthy',
+                'ai_maintenance': 'healthy' if AI_MAINTENANCE_AVAILABLE and ai_maintenance_engine else 'unavailable',
+                'meraki_api': 'healthy' if 'api_key' in session else 'not_configured',
+                'fortimanager_api': 'healthy' if FORTIMANAGER_AVAILABLE else 'unavailable'
+            }
+        }
+        
+        # Check if any critical components are down
+        unhealthy_components = [k for k, v in health_status['components'].items() 
+                              if v not in ['healthy', 'not_configured']]
+        
+        if unhealthy_components:
+            health_status['status'] = 'degraded'
+            health_status['issues'] = unhealthy_components
+        
+        status_code = 200 if health_status['status'] == 'healthy' else 503
+        return jsonify(health_status), status_code
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+# AI Maintenance Dashboard Route
+@app.route('/ai-maintenance')
+def ai_maintenance_dashboard():
+    """AI Maintenance Dashboard - Professional AI-powered monitoring interface"""
+    return render_template('ai_maintenance.html')
+
 # Network Status and Monitoring
 @app.route('/api/network_status/<network_id>')
 def get_network_status(network_id):
@@ -2234,6 +2512,9 @@ if __name__ == '__main__':
         print(f"[QSR] Restaurant mode enabled for: {app_config['qsr_location_name']}")
     
     print("=" * 70)
+    
+    # Initialize AI Maintenance Engine on startup
+    initialize_ai_maintenance_on_startup()
     
     app.run(
         host=app_config['flask_host'], 
