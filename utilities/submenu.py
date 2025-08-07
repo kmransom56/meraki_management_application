@@ -776,7 +776,7 @@ def create_web_visualization(topology_data):
         # Open browser
         webbrowser.open(f'http://localhost:{free_port}')
         
-        print(f"\n✅ Topology visualization is running on http://localhost:{free_port}")
+        print(f"\n[OK] Topology visualization is running on http://localhost:{free_port}")
         print("📝 Press Enter to return to menu (visualization will continue running)...")
         input()
         
@@ -1794,7 +1794,7 @@ def display_enhanced_network_topology_fixed(api_key_or_sdk):
             print("  - Network connectivity problems")
             return
         
-        print(f"✅ Found topology data:")
+        print(f"[OK] Found topology data:")
         print(f"   📊 Network: {topology_data.get('network_name', 'Unknown')}")
         print(f"   🔧 Devices: {len(topology_data.get('devices', []))}")
         print(f"   💻 Clients: {len(topology_data.get('clients', []))}")
@@ -1918,7 +1918,7 @@ def start_enhanced_topology_server(topology_data):
     except Exception as e:
         logging.warning(f"Could not open browser: {e}")
     
-    print(f"✅ Topology visualization is running on http://localhost:{port}")
+    print(f"[OK] Topology visualization is running on http://localhost:{port}")
     print(f"📝 Press Enter to return to menu (visualization will continue running)...")
     input()
 

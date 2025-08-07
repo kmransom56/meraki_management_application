@@ -39,7 +39,7 @@ def print_section(section_name):
 
 def print_success(message):
     """Print success message"""
-    print(f"✅ {message}")
+    print(f"[OK] {message}")
 
 def print_error(message):
     """Print error message"""

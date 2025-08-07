@@ -47,14 +47,14 @@ from getpass import getpass
 try:
     from dotenv import load_dotenv
     load_dotenv()
-    print(colored("✅ Environment variables loaded from .env file", "green"))
+    print(colored("[OK] Environment variables loaded from .env file", "green"))
 except ImportError:
     print(colored("⚠️ python-dotenv not found. Using system environment variables.", "yellow"))
 
 # Apply SSL fixes for corporate environments (Zscaler, Blue Coat, etc.)
 try:
     import ssl_patch  # Applies SSL fixes automatically
-    print(colored("🔒 SSL fixes applied for corporate environment", "green"))
+    print(colored("[SECURITY] SSL fixes applied for corporate environment", "green"))
 except ImportError:
     print(colored("⚠️ SSL patch not found. SSL issues may occur in corporate environments.", "yellow"))
 except ImportError:
@@ -73,7 +73,7 @@ from modules.meraki import meraki_api
 try:
     from enhanced_visualizer import create_enhanced_visualization
     ENHANCED_VIZ_AVAILABLE = True
-    print(colored("✅ Enhanced Network Visualization Module Loaded", "green"))
+    print(colored("[OK] Enhanced Network Visualization Module Loaded", "green"))
 except ImportError as e:
     ENHANCED_VIZ_AVAILABLE = False
     print(colored("⚠️ Enhanced Visualization Module Not Found", "yellow"))
@@ -268,7 +268,7 @@ def create_enhanced_network_visualization(api_key, api_mode):
                 input(colored("\nPress Enter to continue...", "green"))
                 return
             
-            print(f"✅ Selected network ID: {selected_network_id}")
+            print(f"[OK] Selected network ID: {selected_network_id}")
             
             # Find the selected network object
             selected_network = None
@@ -282,7 +282,7 @@ def create_enhanced_network_visualization(api_key, api_mode):
                 input(colored("\nPress Enter to continue...", "green"))
                 return
                 
-            print(f"✅ Selected network object found: {selected_network['name']}")
+            print(f"[OK] Selected network object found: {selected_network['name']}")
                 
         except Exception as e:
             print(colored(f"Error selecting network: {str(e)}", "red"))
@@ -307,7 +307,7 @@ def create_enhanced_network_visualization(api_key, api_mode):
         
         if output_file:
             filename = os.path.basename(output_file)
-            print(colored("\n✅ Enhanced Network Visualization Created Successfully!", "green"))
+            print(colored("\n[OK] Enhanced Network Visualization Created Successfully!", "green"))
             print("=" * 60)
             print(f"📁 File Location: {output_file}")
             print(f"🌐 Web Interface: http://localhost:5000/view-viz/{filename}")
@@ -762,7 +762,7 @@ def initialize_api_key():
     # Try to get key from environment variable (check multiple possible names)
     api_key = os.environ.get('MERAKI_API_KEY') or os.environ.get('MERAKI_DASHBOARD_API_KEY')
     if api_key:
-        print(colored(f"✅ API key loaded from environment variable", "green"))
+        print(colored(f"[OK] API key loaded from environment variable", "green"))
         return api_key
 
     # Try to load stored key
@@ -889,7 +889,7 @@ def main():
             term_extra.print_ascii_art()
             print(colored(f"\n\nWelcome to Cisco Meraki CLU Enhanced Edition! v2.6", "green"))
             if ENHANCED_VIZ_AVAILABLE:
-                print(colored("✅ Enhanced Network Visualization Available", "green"))
+                print(colored("[OK] Enhanced Network Visualization Available", "green"))
             else:
                 print(colored("⚠️ Enhanced Visualization Module Missing", "yellow"))
             

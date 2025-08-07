@@ -165,6 +165,15 @@ def index():
                          qsr_mode=app_config['qsr_mode'],
                          location_name=app_config['qsr_location_name'])
 
+@app.route('/visualization')
+def visualization_index():
+    """Visualization index page - shows network selection"""
+    timestamp = int(time.time())
+    return render_template('visualization_index.html', 
+                         timestamp=timestamp,
+                         cache_bust=timestamp,
+                         qsr_mode=app_config['qsr_mode'])
+
 @app.route('/visualization/<network_id>')
 def visualization_page(network_id):
     """Enhanced network topology visualization page"""
@@ -269,10 +278,14 @@ class ComprehensiveMerakiManager:
             if self.dashboard:
                 orgs = self.dashboard.organizations.getOrganizations()
                 if orgs:
+                    logger.info("[OK] API key validation successful")
                     return True
+            logger.warning("[FAIL] API key validation failed - no organizations returned")
             return False
         except Exception as e:
-            logger.error(f"API key validation failed: {e}")
+            # Use ASCII-safe logging to prevent encoding errors
+            error_msg = str(e).encode('ascii', errors='replace').decode('ascii')
+            logger.error(f"[ERROR] API key validation failed: {error_msg}")
             return False
     
     def get_organizations(self):
