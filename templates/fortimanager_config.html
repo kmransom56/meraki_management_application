@@ -104,49 +104,201 @@
         </div>
     </div>
 
+    <div class="header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-server"></i> Managed Devices</h5>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-success btn-sm" onclick="loadEnvironmentConfigs()">
+                        <i class="fas fa-download"></i> Load from .env
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadManagedDevices()">
+                        <i class="fas fa-sync-alt"></i> Refresh Legacy
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="loadAllManagedDevices()">
+                        <i class="fas fa-globe"></i> Load All Sites
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="config-card">
             <h3><i class="fas fa-network-wired"></i> Multi-Site FortiManager Setup</h3>
             <p class="text-muted mb-4">
-                Configure centralized FortiManager access for your multi-site restaurant network environment.
-                This eliminates the need for direct FortiGate connections through jumpboxes.
+                Configure multiple FortiManager instances for your multi-site restaurant network environment.
+                Manage Arby's, BWW, and Sonic locations from a single interface.
             </p>
+            
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Multi-Instance Support:</strong> Configure each FortiManager instance separately. 
+                The system will aggregate data from all configured instances for unified management.
+            </div>
 
-            <div class="row">
-                <div class="col-md-8">
-                    <form id="fortimanagerForm">
-                        <div class="mb-3">
-                            <label for="fmHost" class="form-label">FortiManager Host/IP</label>
-                            <input type="text" class="form-control" id="fmHost" placeholder="192.168.1.100" required>
-                            <div class="form-text">IP address or hostname of your FortiManager appliance</div>
-                        </div>
+            <!-- Multi-Instance Configuration Tabs -->
+            <ul class="nav nav-tabs mb-4" id="fortimanagerTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="arbys-tab" data-bs-toggle="tab" data-bs-target="#arbys" type="button" role="tab">
+                        <i class="fas fa-utensils"></i> Arby's (ibue1pnftmfg05)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="bww-tab" data-bs-toggle="tab" data-bs-target="#bww" type="button" role="tab">
+                        <i class="fas fa-chicken"></i> BWW (ibue1pnftmfg02)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="sonic-tab" data-bs-toggle="tab" data-bs-target="#sonic" type="button" role="tab">
+                        <i class="fas fa-music"></i> Sonic (ibue1pnftmfg04)
+                    </button>
+                </li>
+            </ul>
 
-                        <div class="mb-3">
-                            <label for="fmUsername" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="fmUsername" placeholder="admin" required>
+            <div class="tab-content" id="fortimanagerTabContent">
+                <!-- Arby's FortiManager -->
+                <div class="tab-pane fade show active" id="arbys" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <form id="fortimanagerFormArbys">
+                                <input type="hidden" id="fmSiteArbys" value="arbys">
+                                <div class="mb-3">
+                                    <label for="fmHostArbys" class="form-label">FortiManager Host/IP</label>
+                                    <input type="text" class="form-control" id="fmHostArbys" value="10.128.144.132" required>
+                                    <div class="form-text">ibue1pnftmfg05 - Arby's FortiManager</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="fmUsernameArbys" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="fmUsernameArbys" placeholder="admin" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="fmPasswordArbys" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="fmPasswordArbys" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="fmPortArbys" class="form-label">Port</label>
+                                    <input type="number" class="form-control" id="fmPortArbys" value="443" min="1" max="65535">
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-fortinet" onclick="testConnection('arbys')">
+                                        <i class="fas fa-plug"></i> Test Connection
+                                    </button>
+                                    <button type="button" class="btn btn-success" onclick="saveFortiManagerConfig('arbys')">
+                                        <i class="fas fa-save"></i> Save Configuration
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-
-                        <div class="mb-3">
-                            <label for="fmPassword" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="fmPassword" required>
+                        <div class="col-md-4">
+                            <div class="connection-test" id="connectionStatusArbys">
+                                <h6><i class="fas fa-info-circle"></i> Connection Status</h6>
+                                <p class="text-muted mb-0">Configure and test Arby's FortiManager connection</p>
+                            </div>
                         </div>
-
-                        <div class="mb-3">
-                            <label for="fmPort" class="form-label">Port</label>
-                            <input type="number" class="form-control" id="fmPort" value="443" min="1" max="65535">
-                            <div class="form-text">HTTPS port for FortiManager JSON-RPC API (default: 443)</div>
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-fortinet" onclick="testConnection()">
-                                <i class="fas fa-plug"></i> Test Connection
-                            </button>
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-save"></i> Save Configuration
-                            </button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
+
+                <!-- BWW FortiManager -->
+                <div class="tab-pane fade" id="bww" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <form id="fortimanagerFormBWW">
+                                <input type="hidden" id="fmSiteBWW" value="bww">
+                                <div class="mb-3">
+                                    <label for="fmHostBWW" class="form-label">FortiManager Host/IP</label>
+                                    <input type="text" class="form-control" id="fmHostBWW" value="10.128.145.4" required>
+                                    <div class="form-text">ibue1pnftmfg02 - BWW FortiManager</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="fmUsernameBWW" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="fmUsernameBWW" placeholder="admin" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="fmPasswordBWW" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="fmPasswordBWW" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="fmPortBWW" class="form-label">Port</label>
+                                    <input type="number" class="form-control" id="fmPortBWW" value="443" min="1" max="65535">
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-fortinet" onclick="testConnection('bww')">
+                                        <i class="fas fa-plug"></i> Test Connection
+                                    </button>
+                                    <button type="button" class="btn btn-success" onclick="saveFortiManagerConfig('bww')">
+                                        <i class="fas fa-save"></i> Save Configuration
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="connection-test" id="connectionStatusBWW">
+                                <h6><i class="fas fa-info-circle"></i> Connection Status</h6>
+                                <p class="text-muted mb-0">Configure and test BWW FortiManager connection</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sonic FortiManager -->
+                <div class="tab-pane fade" id="sonic" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <form id="fortimanagerFormSonic">
+                                <input type="hidden" id="fmSiteSonic" value="sonic">
+                                <div class="mb-3">
+                                    <label for="fmHostSonic" class="form-label">FortiManager Host/IP</label>
+                                    <input type="text" class="form-control" id="fmHostSonic" value="10.128.156.36" required>
+                                    <div class="form-text">ibue1pnftmfg04 - Sonic FortiManager</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="fmUsernameSonic" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="fmUsernameSonic" placeholder="admin" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="fmPasswordSonic" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="fmPasswordSonic" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="fmPortSonic" class="form-label">Port</label>
+                                    <input type="number" class="form-control" id="fmPortSonic" value="443" min="1" max="65535">
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-fortinet" onclick="testConnection('sonic')">
+                                        <i class="fas fa-plug"></i> Test Connection
+                                    </button>
+                                    <button type="button" class="btn btn-success" onclick="saveFortiManagerConfig('sonic')">
+                                        <i class="fas fa-save"></i> Save Configuration
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="connection-test" id="connectionStatusSonic">
+                                <h6><i class="fas fa-info-circle"></i> Connection Status</h6>
+                                <p class="text-muted mb-0">Configure and test Sonic FortiManager connection</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bulk Actions -->
+            <div class="mt-4 p-3 bg-light rounded">
+                <h6><i class="fas fa-tasks"></i> Bulk Actions</h6>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" onclick="testAllConnections()">
+                        <i class="fas fa-plug"></i> Test All Connections
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="saveAllConfigurations()">
+                        <i class="fas fa-save"></i> Save All Configurations
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="loadAllManagedDevices()">
+                        <i class="fas fa-server"></i> Load All Devices
+                    </button>
+                </div>
+            </div>
 
                 <div class="col-md-4">
                     <div class="connection-test" id="connectionStatus">
@@ -222,28 +374,27 @@
     </div>
 
     <script>
-        let connectionTested = false;
+        let connectionTested = {
+            arbys: false,
+            bww: false,
+            sonic: false
+        };
 
-        document.getElementById('fortimanagerForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            saveFortiManagerConfig();
-        });
-
-        function testConnection() {
-            const host = document.getElementById('fmHost').value;
-            const username = document.getElementById('fmUsername').value;
-            const password = document.getElementById('fmPassword').value;
-            const port = document.getElementById('fmPort').value;
+        function testConnection(site) {
+            const host = document.getElementById(`fmHost${site.charAt(0).toUpperCase() + site.slice(1)}`).value;
+            const username = document.getElementById(`fmUsername${site.charAt(0).toUpperCase() + site.slice(1)}`).value;
+            const password = document.getElementById(`fmPassword${site.charAt(0).toUpperCase() + site.slice(1)}`).value;
+            const port = document.getElementById(`fmPort${site.charAt(0).toUpperCase() + site.slice(1)}`).value;
 
             if (!host || !username || !password) {
                 alert('Please fill in all required fields');
                 return;
             }
 
-            const statusDiv = document.getElementById('connectionStatus');
+            const statusDiv = document.getElementById(`connectionStatus${site.charAt(0).toUpperCase() + site.slice(1)}`);
             statusDiv.innerHTML = `
                 <h6><i class="fas fa-spinner fa-spin"></i> Testing Connection</h6>
-                <p class="text-info mb-0">Connecting to FortiManager...</p>
+                <p class="text-info mb-0">Connecting to ${site.toUpperCase()} FortiManager...</p>
             `;
 
             fetch('/api/fortimanager/test', {
@@ -255,7 +406,8 @@
                     host: host,
                     username: username,
                     password: password,
-                    port: parseInt(port)
+                    port: parseInt(port),
+                    site: site
                 })
             })
             .then(response => response.json())
@@ -263,17 +415,16 @@
                 if (data.success) {
                     statusDiv.innerHTML = `
                         <h6><i class="fas fa-check-circle text-success"></i> Connection Successful</h6>
-                        <p class="text-success mb-0">FortiManager is accessible</p>
+                        <p class="text-success mb-0">${site.toUpperCase()} FortiManager is accessible</p>
                         <small class="text-muted">Managed devices: ${data.device_count || 0}</small>
                     `;
-                    connectionTested = true;
-                    loadManagedDevices();
+                    connectionTested[site] = true;
                 } else {
                     statusDiv.innerHTML = `
                         <h6><i class="fas fa-exclamation-triangle text-danger"></i> Connection Failed</h6>
                         <p class="text-danger mb-0">${data.error || 'Unable to connect'}</p>
                     `;
-                    connectionTested = false;
+                    connectionTested[site] = false;
                 }
             })
             .catch(error => {
@@ -282,21 +433,22 @@
                     <h6><i class="fas fa-times-circle text-danger"></i> Connection Error</h6>
                     <p class="text-danger mb-0">Network error occurred</p>
                 `;
-                connectionTested = false;
+                connectionTested[site] = false;
             });
         }
 
-        function saveFortiManagerConfig() {
-            if (!connectionTested) {
-                alert('Please test the connection first');
+        function saveFortiManagerConfig(site) {
+            if (!connectionTested[site]) {
+                alert(`Please test the ${site.toUpperCase()} connection first`);
                 return;
             }
 
             const config = {
-                host: document.getElementById('fmHost').value,
-                username: document.getElementById('fmUsername').value,
-                password: document.getElementById('fmPassword').value,
-                port: parseInt(document.getElementById('fmPort').value)
+                host: document.getElementById(`fmHost${site.charAt(0).toUpperCase() + site.slice(1)}`).value,
+                username: document.getElementById(`fmUsername${site.charAt(0).toUpperCase() + site.slice(1)}`).value,
+                password: document.getElementById(`fmPassword${site.charAt(0).toUpperCase() + site.slice(1)}`).value,
+                port: parseInt(document.getElementById(`fmPort${site.charAt(0).toUpperCase() + site.slice(1)}`).value),
+                site: site
             };
 
             fetch('/api/fortimanager/configure', {
@@ -309,15 +461,53 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('FortiManager configuration saved successfully!');
+                    alert(`${site.toUpperCase()} FortiManager configuration saved successfully!`);
                 } else {
-                    alert('Error saving configuration: ' + (data.error || 'Unknown error'));
+                    alert(`Error saving ${site.toUpperCase()} configuration: ` + (data.error || 'Unknown error'));
                 }
             })
             .catch(error => {
                 console.error('Save error:', error);
-                alert('Error saving configuration');
+                alert(`Error saving ${site.toUpperCase()} configuration`);
             });
+        }
+
+        // Bulk Actions
+        function testAllConnections() {
+            const sites = ['arbys', 'bww', 'sonic'];
+            sites.forEach(site => {
+                setTimeout(() => testConnection(site), 500 * sites.indexOf(site));
+            });
+        }
+
+        function saveAllConfigurations() {
+            const sites = ['arbys', 'bww', 'sonic'];
+            let savedCount = 0;
+            
+            sites.forEach(site => {
+                if (connectionTested[site]) {
+                    saveFortiManagerConfig(site);
+                    savedCount++;
+                }
+            });
+            
+            if (savedCount === 0) {
+                alert('Please test connections first before saving configurations');
+            }
+        }
+
+        function loadAllManagedDevices() {
+            // This will aggregate devices from all configured FortiManager instances
+            fetch('/api/fortimanager/devices/all')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.devices) {
+                        displayAllManagedDevices(data.devices);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading all devices:', error);
+                });
         }
 
         function saveSiteConfig() {
@@ -386,13 +576,192 @@
                         <td>${device.model || 'N/A'}</td>
                         <td><code>${device.serial || 'N/A'}</code></td>
                         <td><span class="status-indicator ${statusClass}"></span>${device.status || 'Unknown'}</td>
-                        <td>${device.site || 'N/A'}</td>
+                        <td>${device.site || device.fortimanager_site || 'N/A'}</td>
                     </tr>
                 `;
             });
 
             html += '</tbody></table></div>';
             deviceList.innerHTML = html;
+        }
+
+        function displayAllManagedDevices(data) {
+            const deviceList = document.getElementById('deviceList');
+            
+            if (!data.devices || data.devices.length === 0) {
+                deviceList.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-server fa-2x mb-3"></i>
+                        <p>No managed devices found across all FortiManager instances</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Create summary header
+            let html = `
+                <div class="alert alert-info mb-4">
+                    <h6><i class="fas fa-info-circle"></i> Multi-Site Device Summary</h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>Total Devices:</strong> ${data.total_devices}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Configured Sites:</strong> ${data.configured_sites.length}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Sites:</strong> ${data.configured_sites.map(s => s.toUpperCase()).join(', ')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Site status indicators
+            html += '<div class="row mb-4">';
+            Object.entries(data.site_status).forEach(([site, status]) => {
+                const statusColor = status.status === 'connected' ? 'success' : 
+                                  status.status === 'authentication_failed' ? 'warning' : 'danger';
+                const statusIcon = status.status === 'connected' ? 'check-circle' : 
+                                 status.status === 'authentication_failed' ? 'exclamation-triangle' : 'times-circle';
+                
+                html += `
+                    <div class="col-md-4">
+                        <div class="card border-${statusColor}">
+                            <div class="card-body text-center">
+                                <i class="fas fa-${statusIcon} text-${statusColor} fa-2x mb-2"></i>
+                                <h6>${site.toUpperCase()}</h6>
+                                <small class="text-muted">${status.host}</small><br>
+                                <span class="badge bg-${statusColor}">${status.device_count} devices</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            // Device table
+            html += '<div class="table-responsive"><table class="table table-striped">';
+            html += '<thead><tr><th>Device Name</th><th>Model</th><th>Serial</th><th>Status</th><th>FortiManager Site</th><th>Host</th></tr></thead><tbody>';
+
+            data.devices.forEach(device => {
+                const statusClass = device.status === 'online' ? 'status-online' : 
+                                  device.status === 'offline' ? 'status-offline' : 'status-unknown';
+                
+                html += `
+                    <tr>
+                        <td><strong>${device.name || 'Unknown'}</strong></td>
+                        <td>${device.model || 'N/A'}</td>
+                        <td><code>${device.serial || 'N/A'}</code></td>
+                        <td><span class="status-indicator ${statusClass}"></span>${device.status || 'Unknown'}</td>
+                        <td><span class="badge bg-primary">${device.fortimanager_site || 'N/A'}</span></td>
+                        <td><small class="text-muted">${device.fortimanager_host || 'N/A'}</small></td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table></div>';
+            deviceList.innerHTML = html;
+        }
+
+        function loadEnvironmentConfigs() {
+            fetch('/api/fortimanager/load-env-configs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    showAlert('success', `Successfully loaded ${data.sites.length} FortiManager configurations from .env file: ${data.sites.map(s => s.toUpperCase()).join(', ')}`);
+                    
+                    // Populate the form fields with loaded configurations
+                    data.sites.forEach(site => {
+                        const config = data.configs[site];
+                        if (config) {
+                            // Populate form fields for each site
+                            const hostField = document.getElementById(`${site}Host`);
+                            const usernameField = document.getElementById(`${site}Username`);
+                            const portField = document.getElementById(`${site}Port`);
+                            
+                            if (hostField) hostField.value = config.host || '';
+                            if (usernameField) usernameField.value = config.username || '';
+                            if (portField) portField.value = config.port || 443;
+                            
+                            // Note: Password is not populated for security reasons
+                        }
+                    });
+                    
+                    // Automatically load devices after loading configs
+                    setTimeout(() => {
+                        loadAllManagedDevices();
+                    }, 1000);
+                } else {
+                    showAlert('danger', `Failed to load configurations from .env file: ${data.error}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading environment configs:', error);
+                showAlert('danger', `Error loading configurations: ${error.message}`);
+            });
+        }
+
+        function loadAllManagedDevices() {
+            const deviceList = document.getElementById('deviceList');
+            deviceList.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading devices from all FortiManager instances...</p>
+                </div>
+            `;
+
+            fetch('/api/fortimanager/devices/all')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayAllManagedDevices(data);
+                    } else {
+                        deviceList.innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Error loading devices: ${data.error}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading all managed devices:', error);
+                    deviceList.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Error loading devices: ${error.message}
+                        </div>
+                    `;
+                });
+        }
+
+        function showAlert(type, message) {
+            // Create alert element
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Insert at top of container
+            const container = document.querySelector('.container');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
         }
 
         // Load existing configuration on page load

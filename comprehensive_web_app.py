@@ -103,12 +103,56 @@ except ImportError as e:
     print(f"[WARNING] API key storage not available: {e}")
     API_KEY_STORAGE_AVAILABLE = False
 
+# Import Redis session management
+try:
+    from redis_session_manager import initialize_session_managers, get_session_managers
+    REDIS_SESSION_AVAILABLE = True
+    print("[OK] Redis session management available")
+except ImportError as e:
+    print(f"[WARNING] Redis session management not available: {e}")
+    REDIS_SESSION_AVAILABLE = False
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# FortiManager Environment Configuration Loader
+def load_fortimanager_configs_from_env():
+    """Load FortiManager configurations from environment variables"""
+    configs = {}
+    
+    # Load ARBYS configuration
+    if all([os.getenv('ARBYS_FORTIMANAGER_HOST'), os.getenv('ARBYS_USERNAME'), os.getenv('ARBYS_PASSWORD')]):
+        configs['arbys'] = {
+            'host': os.getenv('ARBYS_FORTIMANAGER_HOST'),
+            'username': os.getenv('ARBYS_USERNAME'),
+            'password': os.getenv('ARBYS_PASSWORD'),
+            'port': 443
+        }
+    
+    # Load BWW configuration
+    if all([os.getenv('BWW_FORTIMANAGER_HOST'), os.getenv('BWW_USERNAME'), os.getenv('BWW_PASSWORD')]):
+        configs['bww'] = {
+            'host': os.getenv('BWW_FORTIMANAGER_HOST'),
+            'username': os.getenv('BWW_USERNAME'),
+            'password': os.getenv('BWW_PASSWORD'),
+            'port': 443
+        }
+    
+    # Load SONIC configuration
+    if all([os.getenv('SONIC_FORTIMANAGER_HOST'), os.getenv('SONIC_USERNAME'), os.getenv('SONIC_PASSWORD')]):
+        configs['sonic'] = {
+            'host': os.getenv('SONIC_FORTIMANAGER_HOST'),
+            'username': os.getenv('SONIC_USERNAME'),
+            'password': os.getenv('SONIC_PASSWORD'),
+            'port': 443
+        }
+    
+    logger.info(f"Loaded {len(configs)} FortiManager configurations from environment: {list(configs.keys())}")
+    return configs
 
 # Professional-grade application configuration
 app_config = {
@@ -121,6 +165,46 @@ app_config = {
     'qsr_mode': os.environ.get('QSR_MODE', 'True').lower() == 'true',
     'qsr_location_name': os.environ.get('QSR_LOCATION_NAME', 'Restaurant Location')
 }
+
+# FortiManager Configuration from Environment Variables
+def load_fortimanager_configs_from_env():
+    """Load FortiManager configurations from environment variables"""
+    configs = {}
+    
+    # Arby's FortiManager
+    if all([os.environ.get('ARBYS_FORTIMANAGER_HOST'), os.environ.get('ARBYS_USERNAME'), os.environ.get('ARBYS_PASSWORD')]):
+        configs['arbys'] = {
+            'host': os.environ.get('ARBYS_FORTIMANAGER_HOST'),
+            'username': os.environ.get('ARBYS_USERNAME'),
+            'password': os.environ.get('ARBYS_PASSWORD'),
+            'port': 443,
+            'site': 'arbys'
+        }
+        logger.info(f"Loaded Arby's FortiManager config: {configs['arbys']['host']}")
+    
+    # BWW FortiManager
+    if all([os.environ.get('BWW_FORTIMANAGER_HOST'), os.environ.get('BWW_USERNAME'), os.environ.get('BWW_PASSWORD')]):
+        configs['bww'] = {
+            'host': os.environ.get('BWW_FORTIMANAGER_HOST'),
+            'username': os.environ.get('BWW_USERNAME'),
+            'password': os.environ.get('BWW_PASSWORD'),
+            'port': 443,
+            'site': 'bww'
+        }
+        logger.info(f"Loaded BWW FortiManager config: {configs['bww']['host']}")
+    
+    # Sonic FortiManager
+    if all([os.environ.get('SONIC_FORTIMANAGER_HOST'), os.environ.get('SONIC_USERNAME'), os.environ.get('SONIC_PASSWORD')]):
+        configs['sonic'] = {
+            'host': os.environ.get('SONIC_FORTIMANAGER_HOST'),
+            'username': os.environ.get('SONIC_USERNAME'),
+            'password': os.environ.get('SONIC_PASSWORD'),
+            'port': 443,
+            'site': 'sonic'
+        }
+        logger.info(f"Loaded Sonic FortiManager config: {configs['sonic']['host']}")
+    
+    return configs
 
 # Auto-load saved API key if available
 if API_KEY_STORAGE_AVAILABLE and not app_config['meraki_api_key']:
@@ -169,11 +253,10 @@ cached_data = {}
 
 @app.route('/')
 def index():
-    """Main dashboard page with professional UI"""
+    """Main dashboard page - restored original CLI-style interface"""
     timestamp = int(time.time())
-    return render_template('index.html', 
+    return render_template('comprehensive_dashboard.html', 
                          timestamp=timestamp,
-                         cache_bust=timestamp,
                          qsr_mode=app_config['qsr_mode'],
                          location_name=app_config['qsr_location_name'])
 
@@ -195,11 +278,21 @@ def visualization_index_slash():
 def visualization_page(network_id):
     """Enhanced network topology visualization page"""
     timestamp = int(time.time())
+    
+    # Provide default stats data for the template
+    stats = {
+        'devices': 0,
+        'clients': 0,
+        'networks': 1,
+        'uptime': '0%'
+    }
+    
     return render_template('visualization.html', 
                          network_id=network_id,
                          timestamp=timestamp,
                          cache_bust=timestamp,
-                         qsr_mode=app_config['qsr_mode'])
+                         qsr_mode=app_config['qsr_mode'],
+                         stats=stats)
 
 @app.route('/demo/visualization')
 def demo_visualization():
@@ -213,19 +306,31 @@ def fortimanager_config_page():
 
 @app.route('/api/fortimanager/test', methods=['POST'])
 def test_fortimanager_connection():
-    """Test FortiManager connection"""
+    """Test FortiManager connection for specific site"""
+    site = 'unknown'  # Initialize site variable for error handling
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No JSON data provided'}), 400
+            
         host = data.get('host')
         username = data.get('username')
         password = data.get('password')
         port = data.get('port', 443)
+        site = data.get('site', 'default')
         
         if not all([host, username, password]):
             return jsonify({'success': False, 'error': 'Missing required fields'}), 400
         
         # Test FortiManager connection
-        from fortimanager_api import FortiManagerAPI
+        try:
+            from fortimanager_api import FortiManagerAPI
+        except ImportError:
+            return jsonify({
+                'success': False,
+                'error': 'FortiManager API module not available. Please ensure fortimanager_api.py is present.'
+            }), 500
+        
         fm = FortiManagerAPI(host, username, password, port)
         
         if fm.login():
@@ -234,19 +339,22 @@ def test_fortimanager_connection():
             device_count = len(devices) if devices else 0
             fm.logout()
             
+            logger.info(f"Successfully tested {site.upper()} FortiManager connection: {host} ({device_count} devices)")
+            
             return jsonify({
                 'success': True,
-                'message': 'Connection successful',
-                'device_count': device_count
+                'message': f'{site.upper()} FortiManager connection successful',
+                'device_count': device_count,
+                'site': site
             })
         else:
             return jsonify({
                 'success': False,
-                'error': 'Authentication failed'
+                'error': f'{site.upper()} FortiManager authentication failed'
             }), 401
             
     except Exception as e:
-        logger.error(f"FortiManager connection test error: {str(e)}")
+        logger.error(f"FortiManager connection test error for {site}: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Connection error: {str(e)}'
@@ -254,27 +362,32 @@ def test_fortimanager_connection():
 
 @app.route('/api/fortimanager/configure', methods=['POST'])
 def configure_fortimanager():
-    """Save FortiManager configuration"""
+    """Save FortiManager configuration for multiple instances"""
     try:
         data = request.get_json()
+        site = data.get('site', 'default')
         
         # Encrypt and store configuration
         config = {
             'host': data.get('host'),
             'username': data.get('username'),
             'password': data.get('password'),
-            'port': data.get('port', 443)
+            'port': data.get('port', 443),
+            'site': site
         }
         
-        # Store in session (in production, use encrypted database storage)
-        session['fortimanager_config'] = config
+        # Store multiple FortiManager configurations in session
+        if 'fortimanager_configs' not in session:
+            session['fortimanager_configs'] = {}
+        
+        session['fortimanager_configs'][site] = config
         session.permanent = True
         
-        logger.info(f"FortiManager configuration saved for host: {config['host']}")
+        logger.info(f"FortiManager configuration saved for {site.upper()} site: {config['host']}")
         
         return jsonify({
             'success': True,
-            'message': 'Configuration saved successfully'
+            'message': f'{site.upper()} FortiManager configuration saved successfully'
         })
         
     except Exception as e:
@@ -311,7 +424,7 @@ def get_fortimanager_config():
 
 @app.route('/api/fortimanager/devices', methods=['GET'])
 def get_fortimanager_devices():
-    """Get managed devices from FortiManager"""
+    """Get managed devices from single FortiManager (legacy endpoint)"""
     try:
         if 'fortimanager_config' not in session:
             return jsonify({
@@ -339,6 +452,114 @@ def get_fortimanager_devices():
             
     except Exception as e:
         logger.error(f"Get FortiManager devices error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/fortimanager/load-env-configs', methods=['POST'])
+def load_env_fortimanager_configs():
+    """Load FortiManager configurations from environment variables"""
+    try:
+        env_configs = load_fortimanager_configs_from_env()
+        
+        if not env_configs:
+            return jsonify({
+                'success': False,
+                'error': 'No FortiManager configurations found in environment variables'
+            }), 400
+        
+        # Store in session
+        session['fortimanager_configs'] = env_configs
+        session.permanent = True
+        
+        logger.info(f"Loaded {len(env_configs)} FortiManager configurations from environment")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Loaded {len(env_configs)} FortiManager configurations from environment',
+            'sites': list(env_configs.keys()),
+            'configs': {site: {k: v for k, v in config.items() if k != 'password'} for site, config in env_configs.items()}
+        })
+        
+    except Exception as e:
+        logger.error(f"Load environment FortiManager configs error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/fortimanager/devices/all', methods=['GET'])
+def get_all_fortimanager_devices():
+    """Get managed devices from all configured FortiManager instances"""
+    try:
+        # Auto-load from environment if no configs in session
+        if 'fortimanager_configs' not in session:
+            env_configs = load_fortimanager_configs_from_env()
+            if env_configs:
+                session['fortimanager_configs'] = env_configs
+                session.permanent = True
+                logger.info(f"Auto-loaded {len(env_configs)} FortiManager configurations from environment")
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'No FortiManager instances configured'
+                }), 400
+        
+        all_devices = []
+        site_status = {}
+        
+        from fortimanager_api import FortiManagerAPI
+        
+        for site, config in session['fortimanager_configs'].items():
+            try:
+                logger.info(f"Connecting to {site.upper()} FortiManager: {config['host']}")
+                fm = FortiManagerAPI(config['host'], config['username'], config['password'], config.get('port', 443))
+                
+                if fm.login():
+                    devices = fm.get_managed_devices()
+                    fm.logout()
+                    
+                    # Add site information to each device
+                    for device in devices:
+                        device['fortimanager_site'] = site.upper()
+                        device['fortimanager_host'] = config['host']
+                    
+                    all_devices.extend(devices)
+                    site_status[site] = {
+                        'status': 'connected',
+                        'device_count': len(devices),
+                        'host': config['host']
+                    }
+                    
+                    logger.info(f"Successfully retrieved {len(devices)} devices from {site.upper()} FortiManager")
+                else:
+                    site_status[site] = {
+                        'status': 'authentication_failed',
+                        'device_count': 0,
+                        'host': config['host']
+                    }
+                    logger.error(f"Authentication failed for {site.upper()} FortiManager")
+                    
+            except Exception as e:
+                site_status[site] = {
+                    'status': 'connection_error',
+                    'device_count': 0,
+                    'host': config['host'],
+                    'error': str(e)
+                }
+                logger.error(f"Error connecting to {site.upper()} FortiManager: {str(e)}")
+        
+        return jsonify({
+            'success': True,
+            'devices': all_devices,
+            'site_status': site_status,
+            'total_devices': len(all_devices),
+            'configured_sites': list(session['fortimanager_configs'].keys())
+        })
+            
+    except Exception as e:
+        logger.error(f"Get all FortiManager devices error: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -726,10 +947,25 @@ class ComprehensiveMerakiManager:
         """Get networks for an organization"""
         try:
             if not self.dashboard:
+                logger.error("Meraki dashboard not initialized")
                 return []
-            return self.dashboard.organizations.getOrganizationNetworks(org_id)
+            
+            logger.info(f"Fetching networks for organization: {org_id}")
+            networks = self.dashboard.organizations.getOrganizationNetworks(org_id)
+            
+            if networks:
+                logger.info(f"Successfully retrieved {len(networks)} networks")
+                # Log network names for debugging
+                network_names = [net.get('name', 'Unknown') for net in networks[:5]]  # First 5 networks
+                logger.debug(f"Network names (first 5): {network_names}")
+            else:
+                logger.warning(f"No networks returned for organization {org_id}")
+            
+            return networks or []
+            
         except Exception as e:
-            logger.error(f"Error getting networks: {e}")
+            logger.error(f"Error getting networks for org {org_id}: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
             return []
     
     def get_devices(self, network_id):
@@ -1101,12 +1337,30 @@ def get_networks(org_id):
         if 'api_key' not in session:
             return jsonify({'error': 'API key not set'}), 401
         
+        logger.info(f"Getting networks for organization: {org_id}")
+        
+        # Validate organization ID
+        if not org_id or org_id == 'undefined':
+            return jsonify({'error': 'Invalid organization ID'}), 400
+        
         networks = meraki_manager.get_networks(org_id)
+        
+        if not networks:
+            logger.warning(f"No networks found for organization {org_id}")
+            return jsonify({
+                'networks': [],
+                'message': f'No networks found for this organization. Please verify the organization has networks configured.'
+            })
+        
+        logger.info(f"Found {len(networks)} networks for organization {org_id}")
         return jsonify({'networks': networks})
     
     except Exception as e:
-        logger.error(f"Error getting networks: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error getting networks for org {org_id}: {str(e)}")
+        return jsonify({
+            'error': f'Failed to retrieve networks: {str(e)}',
+            'org_id': org_id
+        }), 500
 
 @app.route('/api/devices/<network_id>')
 def get_devices(network_id):
@@ -2745,16 +2999,28 @@ if __name__ == '__main__':
     print("[CACHE] Cache-busting enabled for development")
     print("[SECURITY] Session management and API key encryption active")
     
+    # Initialize Redis Session Management
+    if REDIS_SESSION_AVAILABLE:
+        try:
+            redis_host = os.environ.get('REDIS_HOST', 'localhost')
+            redis_port = int(os.environ.get('REDIS_PORT', 6379))
+            redis_password = os.environ.get('REDIS_PASSWORD', None)
+            
+            initialize_session_managers(redis_host, redis_port, redis_password)
+            print(f"[OK] Redis session management initialized: {redis_host}:{redis_port}")
+        except Exception as e:
+            print(f"[WARNING] Redis session management initialization failed: {e}")
+            REDIS_SESSION_AVAILABLE = False
+
     # Initialize AI Maintenance Engine
     if AI_MAINTENANCE_AVAILABLE:
-        try:
-            ai_engine = initialize_ai_maintenance()
-            print("[AI] AI Maintenance Engine initialized and monitoring started")
-        except Exception as e:
-            print(f"[ERROR] Failed to initialize AI Maintenance Engine: {e}")
+        ai_engine = AIMaintenanceEngine()
+        ai_engine.start_monitoring()
+        print("[OK] AI Maintenance Engine started")
     else:
+        ai_engine = None
         print("[WARNING] AI Maintenance Engine not available")
-    
+
     print("=" * 70)
     
     # Start the Flask application

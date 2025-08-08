@@ -18,6 +18,10 @@ colorama>=0.4.6
 # FortiManager and FortiGate API integration
 paramiko>=3.4.0
 requests-toolbelt>=1.0.0
+
+# Redis session management for production scalability
+redis>=5.0.0
+hiredis>=2.3.0
 jsonrpc-requests>=0.4.0
 netmiko>=4.3.0
 
