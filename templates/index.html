@@ -218,6 +218,11 @@
             opacity: 0.8;
         }
 
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 2rem;
@@ -360,12 +365,15 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Networks...';
             btn.disabled = true;
             
-            // Fetch organizations from API
+            // First check if API key is configured by testing organizations endpoint
             fetch('/api/organizations')
                 .then(response => response.json())
                 .then(data => {
-                    if (data.organizations && data.organizations.length > 0) {
-                        // Create network selection modal
+                    if (data.error) {
+                        // API key not configured
+                        showApiKeyRequiredModal();
+                    } else if (data.organizations && data.organizations.length > 0) {
+                        // API key is working, show network selection modal
                         showNetworkSelectionModal(data.organizations);
                     } else {
                         alert('No organizations found. Please check your API key configuration in Settings.');
@@ -373,13 +381,102 @@
                 })
                 .catch(error => {
                     console.error('Error loading networks:', error);
-                    alert('Error loading networks. Please check your API key configuration in Settings.');
+                    showApiKeyRequiredModal();
                 })
                 .finally(() => {
                     // Restore button
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 });
+        }
+        
+        function showApiKeyRequiredModal() {
+            // Create modal for API key configuration
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.8); display: flex; align-items: center;
+                justify-content: center; z-index: 1000;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white; padding: 2rem; border-radius: 8px;
+                max-width: 500px; width: 90%; text-align: center;
+            `;
+            
+            content.innerHTML = `
+                <h2><i class="fas fa-key" style="color: var(--warning-color);"></i> API Key Required</h2>
+                <p style="margin: 1rem 0; color: #666;">You need to configure your Meraki API key before viewing networks.</p>
+                <div style="margin: 1.5rem 0;">
+                    <input type="password" id="quickApiKey" placeholder="Enter your Meraki API key" 
+                           style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 1rem;">
+                    <div style="display: flex; gap: 1rem; justify-content: center;">
+                        <button onclick="quickSetApiKey()" class="btn btn-primary">
+                            <i class="fas fa-check"></i> Set API Key
+                        </button>
+                        <button onclick="window.location.href='/settings'" class="btn btn-secondary">
+                            <i class="fas fa-cog"></i> Go to Settings
+                        </button>
+                        <button onclick="closeModal()" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            // Focus on input
+            setTimeout(() => document.getElementById('quickApiKey').focus(), 100);
+            
+            // Add close function to window
+            window.closeModal = () => document.body.removeChild(modal);
+        }
+        
+        function quickSetApiKey() {
+            const apiKey = document.getElementById('quickApiKey').value.trim();
+            if (!apiKey) {
+                alert('Please enter your API key');
+                return;
+            }
+            
+            // Show loading
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validating...';
+            btn.disabled = true;
+            
+            // Validate API key
+            fetch('/api/validate_key', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    api_key: apiKey,
+                    api_mode: 'custom'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // API key validated, close modal and reload networks
+                    closeModal();
+                    setTimeout(() => loadNetworks(), 500);
+                } else {
+                    alert('Invalid API key: ' + (data.error || 'Please check your key and try again'));
+                }
+            })
+            .catch(error => {
+                console.error('API key validation error:', error);
+                alert('Error validating API key. Please try again.');
+            })
+            .finally(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
         }
         
         function showNetworkSelectionModal(organizations) {
@@ -402,7 +499,7 @@
             organizations.forEach(org => {
                 html += `<div style="margin: 1rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 4px;">`;
                 html += `<h3>${org.name}</h3>`;
-                html += `<button onclick="loadOrgNetworks('${org.id}', '${org.name}')" class="btn btn-primary" style="margin: 0.5rem 0;">View Networks</button>`;
+                html += `<button class="btn btn-primary org-networks-btn" data-org-id="${org.id}" data-org-name="${org.name}" style="margin: 0.5rem 0;">View Networks</button>`;
                 html += `</div>`;
             });
             
@@ -414,6 +511,103 @@
             
             // Add close function to window
             window.closeModal = () => document.body.removeChild(modal);
+            
+            // Add event listeners for org network buttons
+            content.addEventListener('click', function(e) {
+                if (e.target.classList.contains('org-networks-btn')) {
+                    const orgId = e.target.getAttribute('data-org-id');
+                    const orgName = e.target.getAttribute('data-org-name');
+                    loadOrgNetworks(orgId, orgName);
+                }
+            });
+        }
+        
+        function loadOrgNetworks(orgId, orgName) {
+            console.log('Loading networks for organization:', orgName, orgId);
+            
+            // Show loading in the modal
+            const modal = document.querySelector('div[style*="position: fixed"]');
+            if (modal) {
+                const content = modal.querySelector('div[style*="background: white"]');
+                content.innerHTML = `
+                    <h2><i class="fas fa-network-wired"></i> Networks in ${orgName}</h2>
+                    <div style="text-align: center; padding: 2rem;">
+                        <div style="border: 4px solid #f3f3f3; border-top: 4px solid var(--secondary-color); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+                        <p>Loading networks...</p>
+                    </div>
+                `;
+            }
+            
+            // Fetch networks for this organization
+            fetch(`/api/networks/${orgId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.networks && data.networks.length > 0) {
+                        showNetworksList(orgName, data.networks);
+                    } else {
+                        showNetworksError(`No networks found in ${orgName}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading networks:', error);
+                    showNetworksError(`Error loading networks for ${orgName}. Please check your API configuration.`);
+                });
+        }
+        
+        function showNetworksList(orgName, networks) {
+            const modal = document.querySelector('div[style*="position: fixed"]');
+            if (modal) {
+                const content = modal.querySelector('div[style*="background: white"]');
+                let html = `<h2><i class="fas fa-network-wired"></i> Networks in ${orgName}</h2>`;
+                
+                html += '<div style="max-height: 400px; overflow-y: auto; margin: 1rem 0;">';
+                
+                networks.forEach(network => {
+                    html += `
+                        <div style="margin: 1rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 4px; background: #f8f9fa;">
+                            <h4><i class="fas fa-sitemap"></i> ${network.name}</h4>
+                            <p style="color: #666; margin: 0.5rem 0;">ID: ${network.id}</p>
+                            <p style="color: #666; margin: 0.5rem 0;">Products: ${network.productTypes ? network.productTypes.join(', ') : 'Unknown'}</p>
+                            <div style="margin-top: 1rem;">
+                                <button onclick="viewTopology('${network.id}', '${network.name}')" class="btn btn-primary" style="margin-right: 0.5rem;">
+                                    <i class="fas fa-eye"></i> View Topology
+                                </button>
+                                <button onclick="viewDevices('${network.id}', '${network.name}')" class="btn btn-success">
+                                    <i class="fas fa-server"></i> View Devices
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                html += '<button onclick="closeModal()" class="btn btn-secondary" style="margin-top: 1rem;">Close</button>';
+                content.innerHTML = html;
+            }
+        }
+        
+        function showNetworksError(message) {
+            const modal = document.querySelector('div[style*="position: fixed"]');
+            if (modal) {
+                const content = modal.querySelector('div[style*="background: white"]');
+                content.innerHTML = `
+                    <h2><i class="fas fa-exclamation-triangle"></i> Error</h2>
+                    <div style="padding: 1rem; background: #f8d7da; color: #721c24; border-radius: 4px; margin: 1rem 0;">
+                        ${message}
+                    </div>
+                    <button onclick="closeModal()" class="btn btn-secondary">Close</button>
+                `;
+            }
+        }
+        
+        function viewTopology(networkId, networkName) {
+            console.log('Viewing topology for:', networkName, networkId);
+            window.location.href = `/visualization/${networkId}`;
+        }
+        
+        function viewDevices(networkId, networkName) {
+            console.log('Viewing devices for:', networkName, networkId);
+            window.location.href = `/device_inventory/${networkId}`;
         }
 
         // Add professional loading animations and interactions
@@ -432,8 +626,8 @@
         });
 
         // Cache-busting: Force reload if timestamp changes
-        const currentTimestamp = {{ timestamp }};
-        console.log('Professional Network Management Platform loaded at:', new Date(currentTimestamp * 1000));
+        const currentTimestamp = Date.now();
+        console.log('Professional Network Management Platform loaded at:', new Date(currentTimestamp));
     </script>
 </body>
 </html>
