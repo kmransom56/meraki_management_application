@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Inventory - FortiGate Style</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --fortinet-red: #d43527;
+            --fortinet-dark-red: #b02e20;
+            --fortinet-blue: #0066cc;
+            --fortinet-green: #28a745;
+            --fortinet-orange: #fd7e14;
+            --fortinet-gray: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Lato', sans-serif;
+            background: var(--fortinet-gray);
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--fortinet-red), var(--fortinet-dark-red));
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .main-container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 250px;
+            text-align: center;
+        }
+
+        .stat-card h6 {
+            color: var(--fortinet-red);
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 200px;
+            margin-bottom: 10px;
+        }
+
+        .device-table-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .table-header {
+            background: var(--fortinet-red);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .table-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px 20px 0;
+        }
+
+        .device-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .device-table th {
+            background: #f8f9fa;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .device-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #dee2e6;
+            vertical-align: middle;
+        }
+
+        .device-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-online {
+            color: var(--fortinet-green);
+        }
+
+        .status-offline {
+            color: #dc3545;
+        }
+
+        .status-unknown {
+            color: #6c757d;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-dot.online {
+            background: var(--fortinet-green);
+        }
+
+        .status-dot.offline {
+            background: #dc3545;
+        }
+
+        .status-dot.unknown {
+            background: #6c757d;
+        }
+
+        .device-type-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .device-type-fortigate {
+            background: rgba(212, 53, 39, 0.1);
+            color: var(--fortinet-red);
+        }
+
+        .device-type-switch {
+            background: rgba(40, 167, 69, 0.1);
+            color: var(--fortinet-green);
+        }
+
+        .device-type-ap {
+            background: rgba(253, 126, 20, 0.1);
+            color: var(--fortinet-orange);
+        }
+
+        .device-type-unknown {
+            background: rgba(108, 117, 125, 0.1);
+            color: #6c757d;
+        }
+
+        .search-box {
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .filter-dropdown {
+            min-width: 120px;
+        }
+
+        .pagination-container {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            background: #f8f9fa;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .stats-row {
+                flex-direction: column;
+            }
+            
+            .table-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .search-box {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-0">
+                    <i class="fas fa-server me-2"></i>
+                    Device Inventory - FortiGate Style
+                </h4>
+                <small class="opacity-75">Multi-Site Restaurant Network Device Management</small>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-light btn-sm" onclick="refreshDevices()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+                <button class="btn btn-light btn-sm" onclick="exportDevices()">
+                    <i class="fas fa-download me-1"></i>Export
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Statistics Cards -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <h6>Device Status</h6>
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+                <div class="text-center">
+                    <small class="text-muted">Total Devices: <span id="totalDevicesCount">0</span></small>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <h6>Device Types</h6>
+                <div class="chart-container">
+                    <canvas id="typeChart"></canvas>
+                </div>
+                <div class="text-center">
+                    <small class="text-muted">Device Categories</small>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <h6>Site Distribution</h6>
+                <div class="chart-container">
+                    <canvas id="siteChart"></canvas>
+                </div>
+                <div class="text-center">
+                    <small class="text-muted">Multi-Site Coverage</small>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <h6>Health Status</h6>
+                <div class="chart-container">
+                    <canvas id="healthChart"></canvas>
+                </div>
+                <div class="text-center">
+                    <small class="text-muted">Network Health</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Device Table -->
+        <div class="device-table-container">
+            <div class="table-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Device Inventory
+                </h5>
+            </div>
+            
+            <div class="table-controls">
+                <div class="search-box">
+                    <input type="text" class="form-control form-control-sm" id="deviceSearch" 
+                           placeholder="Search devices..." onkeyup="filterDevices()">
+                </div>
+                <select class="form-select form-select-sm filter-dropdown" id="statusFilter" onchange="filterDevices()">
+                    <option value="">All Status</option>
+                    <option value="online">Online</option>
+                    <option value="offline">Offline</option>
+                    <option value="unknown">Unknown</option>
+                </select>
+                <select class="form-select form-select-sm filter-dropdown" id="typeFilter" onchange="filterDevices()">
+                    <option value="">All Types</option>
+                    <option value="fortigate">FortiGate</option>
+                    <option value="switch">Switch</option>
+                    <option value="ap">Access Point</option>
+                    <option value="unknown">Unknown</option>
+                </select>
+                <select class="form-select form-select-sm filter-dropdown" id="siteFilter" onchange="filterDevices()">
+                    <option value="">All Sites</option>
+                    <option value="ARBYS">ARBYS</option>
+                    <option value="BWW">BWW</option>
+                    <option value="SONIC">SONIC</option>
+                </select>
+            </div>
+
+            <div class="table-responsive">
+                <table class="device-table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Description</th>
+                            <th>Last Seen (UTC)</th>
+                            <th>Device Type</th>
+                            <th>MAC Address</th>
+                            <th>IPv4 Address</th>
+                            <th>Connected To</th>
+                            <th>VLAN</th>
+                            <th>Vendor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deviceTableBody">
+                        <!-- Device rows will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination-container">
+                <div>
+                    Showing <span id="showingStart">0</span> to <span id="showingEnd">0</span> of <span id="totalDevices">0</span> devices
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0" id="pagination">
+                        <!-- Pagination will be populated here -->
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="text-center">
+                    <div class="spinner-border text-danger mb-2" role="status"></div>
+                    <div>Loading device inventory...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        class FortiGateDeviceInventory {
+            constructor() {
+                this.devices = [];
+                this.filteredDevices = [];
+                this.currentPage = 1;
+                this.itemsPerPage = 25;
+                this.charts = {};
+                
+                this.init();
+            }
+
+            async init() {
+                try {
+                    await this.loadDevices();
+                    this.renderCharts();
+                    this.renderDeviceTable();
+                    this.hideLoading();
+                } catch (error) {
+                    console.error('Error initializing device inventory:', error);
+                    this.showError('Failed to load device inventory');
+                }
+            }
+
+            async loadDevices() {
+                try {
+                    const response = await fetch('/api/fortimanager/devices/all');
+                    const data = await response.json();
+                    
+                    if (data.success && data.devices) {
+                        this.processDeviceData(data.devices);
+                    } else {
+                        // Fallback to demo data
+                        this.loadDemoData();
+                    }
+                } catch (error) {
+                    console.log('Loading demo data due to API error:', error);
+                    this.loadDemoData();
+                }
+            }
+
+            processDeviceData(devices) {
+                this.devices = devices.map((device, index) => ({
+                    id: device.name || `device_${index}`,
+                    description: device.name || 'Unknown Device',
+                    lastSeen: this.formatLastSeen(device.last_seen),
+                    deviceType: this.getDeviceType(device),
+                    macAddress: device.mac || 'N/A',
+                    ipAddress: device.ip || 'N/A',
+                    connectedTo: device.parent_device || 'N/A',
+                    vlan: device.vlan || 'N/A',
+                    vendor: this.getVendor(device),
+                    status: this.determineDeviceStatus(device),
+                    site: device.fortimanager_site || 'Unknown',
+                    model: device.platform_str || 'Unknown',
+                    serial: device.serial || 'N/A'
+                }));
+
+                this.filteredDevices = [...this.devices];
+            }
+
+            determineDeviceStatus(device) {
+                // Multiple ways to determine device status
+                if (device.conn_status === 1 || device.conn_status === '1') return 'online';
+                if (device.status === 'online' || device.status === 'up') return 'online';
+                if (device.state === 'online' || device.state === 'up') return 'online';
+                if (device.connection_status === 'connected') return 'online';
+                
+                // Check if device has recent activity (last seen within 5 minutes)
+                if (device.last_seen) {
+                    try {
+                        const lastSeen = new Date(device.last_seen);
+                        const now = new Date();
+                        const diffMinutes = (now - lastSeen) / (1000 * 60);
+                        if (diffMinutes <= 5) return 'online';
+                    } catch (e) {
+                        // Ignore date parsing errors
+                    }
+                }
+                
+                // Default to offline if no positive indicators
+                return 'offline';
+            }
+
+            loadDemoData() {
+                // Demo data matching FortiGate interface
+                this.devices = [
+                    {
+                        id: 'fg_arbys',
+                        description: 'ARBYS-FG-01',
+                        lastSeen: '2025-08-08 17:45:00',
+                        deviceType: 'fortigate',
+                        macAddress: '00:09:0F:12:34:56',
+                        ipAddress: '10.128.144.132',
+                        connectedTo: 'Internet Gateway',
+                        vlan: 'WAN',
+                        vendor: 'Fortinet',
+                        status: 'online',
+                        site: 'ARBYS'
+                    },
+                    {
+                        id: 'sw_arbys',
+                        description: 'ARBYS-SW-01',
+                        lastSeen: '2025-08-08 17:44:30',
+                        deviceType: 'switch',
+                        macAddress: '88:15:44:AB:CD:EF',
+                        ipAddress: '10.128.144.10',
+                        connectedTo: 'ARBYS-FG-01',
+                        vlan: 'LAN',
+                        vendor: 'Meraki',
+                        status: 'online',
+                        site: 'ARBYS'
+                    },
+                    {
+                        id: 'ap_arbys',
+                        description: 'ARBYS-AP-01',
+                        lastSeen: '2025-08-08 17:43:15',
+                        deviceType: 'ap',
+                        macAddress: '88:15:44:12:34:AB',
+                        ipAddress: '10.128.144.20',
+                        connectedTo: 'ARBYS-SW-01',
+                        vlan: 'WIFI',
+                        vendor: 'Meraki',
+                        status: 'online',
+                        site: 'ARBYS'
+                    },
+                    {
+                        id: 'fg_bww',
+                        description: 'BWW-FG-01',
+                        lastSeen: '2025-08-08 17:45:10',
+                        deviceType: 'fortigate',
+                        macAddress: '00:09:0F:56:78:90',
+                        ipAddress: '10.128.145.4',
+                        connectedTo: 'Internet Gateway',
+                        vlan: 'WAN',
+                        vendor: 'Fortinet',
+                        status: 'online',
+                        site: 'BWW'
+                    },
+                    {
+                        id: 'fg_sonic',
+                        description: 'SONIC-FG-01',
+                        lastSeen: '2025-08-08 17:40:00',
+                        deviceType: 'fortigate',
+                        macAddress: '00:09:0F:AB:CD:12',
+                        ipAddress: '10.128.156.36',
+                        connectedTo: 'Internet Gateway',
+                        vlan: 'WAN',
+                        vendor: 'Fortinet',
+                        status: 'offline',
+                        site: 'SONIC'
+                    }
+                ];
+
+                this.filteredDevices = [...this.devices];
+            }
+
+            getDeviceType(device) {
+                const model = (device.platform_str || '').toLowerCase();
+                if (model.includes('fortigate')) return 'fortigate';
+                if (model.includes('fortiap')) return 'ap';
+                if (model.includes('fortiswitch')) return 'switch';
+                if (model.includes('meraki')) {
+                    if (model.includes('mr') || model.includes('ap')) return 'ap';
+                    if (model.includes('ms') || model.includes('switch')) return 'switch';
+                }
+                return 'unknown';
+            }
+
+            getVendor(device) {
+                const model = (device.platform_str || '').toLowerCase();
+                if (model.includes('forti')) return 'Fortinet';
+                if (model.includes('meraki')) return 'Meraki';
+                return 'Unknown';
+            }
+
+            formatLastSeen(lastSeen) {
+                if (!lastSeen) return 'N/A';
+                try {
+                    return new Date(lastSeen).toLocaleString();
+                } catch {
+                    return 'N/A';
+                }
+            }
+
+            renderCharts() {
+                this.renderStatusChart();
+                this.renderTypeChart();
+                this.renderSiteChart();
+                this.renderHealthChart();
+            }
+
+            renderStatusChart() {
+                const ctx = document.getElementById('statusChart').getContext('2d');
+                const statusCounts = this.getStatusCounts();
+                
+                this.charts.status = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Online', 'Offline', 'Unknown'],
+                        datasets: [{
+                            data: [statusCounts.online, statusCounts.offline, statusCounts.unknown],
+                            backgroundColor: ['#28a745', '#dc3545', '#6c757d'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { fontSize: 12 }
+                            }
+                        }
+                    }
+                });
+            }
+
+            renderTypeChart() {
+                const ctx = document.getElementById('typeChart').getContext('2d');
+                const typeCounts = this.getTypeCounts();
+                
+                this.charts.type = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['FortiGate', 'Switch', 'Access Point', 'Unknown'],
+                        datasets: [{
+                            data: [typeCounts.fortigate, typeCounts.switch, typeCounts.ap, typeCounts.unknown],
+                            backgroundColor: ['#d43527', '#28a745', '#fd7e14', '#6c757d'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { fontSize: 12 }
+                            }
+                        }
+                    }
+                });
+            }
+
+            renderSiteChart() {
+                const ctx = document.getElementById('siteChart').getContext('2d');
+                const siteCounts = this.getSiteCounts();
+                
+                this.charts.site = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(siteCounts),
+                        datasets: [{
+                            data: Object.values(siteCounts),
+                            backgroundColor: ['#0066cc', '#28a745', '#fd7e14', '#6c757d'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { fontSize: 12 }
+                            }
+                        }
+                    }
+                });
+            }
+
+            renderHealthChart() {
+                const ctx = document.getElementById('healthChart').getContext('2d');
+                const healthData = this.getHealthData();
+                
+                this.charts.health = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Healthy', 'Warning', 'Critical'],
+                        datasets: [{
+                            data: [healthData.healthy, healthData.warning, healthData.critical],
+                            backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { fontSize: 12 }
+                            }
+                        }
+                    }
+                });
+            }
+
+            getStatusCounts() {
+                return {
+                    online: this.devices.filter(d => d.status === 'online').length,
+                    offline: this.devices.filter(d => d.status === 'offline').length,
+                    unknown: this.devices.filter(d => d.status === 'unknown').length
+                };
+            }
+
+            getTypeCounts() {
+                return {
+                    fortigate: this.devices.filter(d => d.deviceType === 'fortigate').length,
+                    switch: this.devices.filter(d => d.deviceType === 'switch').length,
+                    ap: this.devices.filter(d => d.deviceType === 'ap').length,
+                    unknown: this.devices.filter(d => d.deviceType === 'unknown').length
+                };
+            }
+
+            getSiteCounts() {
+                const sites = {};
+                this.devices.forEach(device => {
+                    sites[device.site] = (sites[device.site] || 0) + 1;
+                });
+                return sites;
+            }
+
+            getHealthData() {
+                const online = this.devices.filter(d => d.status === 'online').length;
+                const total = this.devices.length;
+                const healthPercent = total > 0 ? (online / total) * 100 : 0;
+                
+                return {
+                    healthy: healthPercent >= 80 ? online : Math.floor(online * 0.7),
+                    warning: healthPercent >= 60 ? Math.floor(online * 0.2) : Math.floor(online * 0.5),
+                    critical: total - online
+                };
+            }
+
+            renderDeviceTable() {
+                const tbody = document.getElementById('deviceTableBody');
+                const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+                const endIndex = startIndex + this.itemsPerPage;
+                const pageDevices = this.filteredDevices.slice(startIndex, endIndex);
+
+                tbody.innerHTML = '';
+
+                pageDevices.forEach(device => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>
+                            <div class="status-indicator status-${device.status}">
+                                <div class="status-dot ${device.status}"></div>
+                                ${device.status.charAt(0).toUpperCase() + device.status.slice(1)}
+                            </div>
+                        </td>
+                        <td><strong>${device.description}</strong></td>
+                        <td>${device.lastSeen}</td>
+                        <td>
+                            <span class="device-type-badge device-type-${device.deviceType}">
+                                ${device.deviceType.toUpperCase()}
+                            </span>
+                        </td>
+                        <td><code>${device.macAddress}</code></td>
+                        <td><code>${device.ipAddress}</code></td>
+                        <td>${device.connectedTo}</td>
+                        <td><span class="badge bg-secondary">${device.vlan}</span></td>
+                        <td>${device.vendor}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                this.updatePagination();
+                this.updateDeviceCount();
+            }
+
+            filterDevices() {
+                const searchTerm = document.getElementById('deviceSearch').value.toLowerCase();
+                const statusFilter = document.getElementById('statusFilter').value;
+                const typeFilter = document.getElementById('typeFilter').value;
+                const siteFilter = document.getElementById('siteFilter').value;
+
+                this.filteredDevices = this.devices.filter(device => {
+                    const matchesSearch = !searchTerm || 
+                        device.description.toLowerCase().includes(searchTerm) ||
+                        device.ipAddress.includes(searchTerm) ||
+                        device.macAddress.toLowerCase().includes(searchTerm);
+                    
+                    const matchesStatus = !statusFilter || device.status === statusFilter;
+                    const matchesType = !typeFilter || device.deviceType === typeFilter;
+                    const matchesSite = !siteFilter || device.site === siteFilter;
+
+                    return matchesSearch && matchesStatus && matchesType && matchesSite;
+                });
+
+                this.currentPage = 1;
+                this.renderDeviceTable();
+            }
+
+            updatePagination() {
+                const totalPages = Math.ceil(this.filteredDevices.length / this.itemsPerPage);
+                const pagination = document.getElementById('pagination');
+                
+                pagination.innerHTML = '';
+                
+                for (let i = 1; i <= totalPages; i++) {
+                    const li = document.createElement('li');
+                    li.className = `page-item ${i === this.currentPage ? 'active' : ''}`;
+                    li.innerHTML = `<a class="page-link" href="#" onclick="deviceInventory.goToPage(${i})">${i}</a>`;
+                    pagination.appendChild(li);
+                }
+            }
+
+            updateDeviceCount() {
+                const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+                const endIndex = Math.min(startIndex + this.itemsPerPage, this.filteredDevices.length);
+                
+                document.getElementById('showingStart').textContent = startIndex + 1;
+                document.getElementById('showingEnd').textContent = endIndex;
+                document.getElementById('totalDevices').textContent = this.filteredDevices.length;
+                document.getElementById('totalDevicesCount').textContent = this.devices.length;
+            }
+
+            goToPage(page) {
+                this.currentPage = page;
+                this.renderDeviceTable();
+            }
+
+            hideLoading() {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+
+            showError(message) {
+                this.hideLoading();
+                const tbody = document.getElementById('deviceTableBody');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center text-danger py-4">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            ${message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Global functions
+        function refreshDevices() {
+            location.reload();
+        }
+
+        function exportDevices() {
+            // Implement export functionality
+            alert('Export functionality would be implemented here');
+        }
+
+        function filterDevices() {
+            deviceInventory.filterDevices();
+        }
+
+        // Initialize when page loads
+        let deviceInventory;
+        document.addEventListener('DOMContentLoaded', () => {
+            deviceInventory = new FortiGateDeviceInventory();
+        });
+    </script>
+</body>
+</html>

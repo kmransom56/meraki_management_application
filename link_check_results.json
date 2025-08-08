@@ -1,0 +1,346 @@
+{
+  "working_links": [
+    {
+      "url": "http://127.0.0.1:10000/",
+      "description": "Main Dashboard",
+      "status_code": 200,
+      "response_time": 0.021623,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 96093,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/visualization",
+      "description": "Visualization Index",
+      "status_code": 200,
+      "response_time": 0.005198,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 11070,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/visualization/",
+      "description": "Visualization Index (trailing slash)",
+      "status_code": 200,
+      "response_time": 0.003961,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 11070,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/fortigate-topology",
+      "description": "FortiGate Topology Page",
+      "status_code": 200,
+      "response_time": 0.007759,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 19484,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/fortigate-devices",
+      "description": "FortiGate Device Inventory",
+      "status_code": 200,
+      "response_time": 0.010427,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 31281,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/network-visualization",
+      "description": "Network Visualization",
+      "status_code": 200,
+      "response_time": 0.005387,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 11070,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/health",
+      "description": "Health Check API",
+      "status_code": 200,
+      "response_time": 0.037553,
+      "content_type": "application/json",
+      "content_length": 303,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/devices",
+      "description": "Device List API",
+      "status_code": 200,
+      "response_time": 0.042991,
+      "content_type": "application/json",
+      "content_length": 79,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/networks",
+      "description": "Networks API",
+      "status_code": 200,
+      "response_time": 0.038922,
+      "content_type": "application/json",
+      "content_length": 80,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/organizations",
+      "description": "Organizations API",
+      "status_code": 200,
+      "response_time": 0.681868,
+      "content_type": "application/json",
+      "content_length": 7432,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/fortimanager/config",
+      "description": "FortiManager Config API",
+      "status_code": 200,
+      "response_time": 0.003019,
+      "content_type": "application/json",
+      "content_length": 93,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/ai-maintenance/status",
+      "description": "AI Maintenance Status",
+      "status_code": 200,
+      "response_time": 0.002571,
+      "content_type": "application/json",
+      "content_length": 160,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/ai-maintenance/metrics",
+      "description": "AI Maintenance Metrics",
+      "status_code": 200,
+      "response_time": 0.002339,
+      "content_type": "application/json",
+      "content_length": 326,
+      "success": true
+    }
+  ],
+  "broken_links": [
+    {
+      "url": "http://127.0.0.1:10000/fortimanager-config",
+      "description": "FortiManager Configuration",
+      "status_code": 404,
+      "response_time": 0.004338,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 207,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/fortimanager/devices",
+      "description": "FortiManager Devices API",
+      "status_code": 400,
+      "response_time": 0.003555,
+      "content_type": "application/json",
+      "content_length": 65,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/fortimanager/test",
+      "description": "FortiManager Test API",
+      "status_code": 405,
+      "response_time": 0.002964,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 153,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/fortimanager/all-devices",
+      "description": "All FortiManager Devices API",
+      "status_code": 404,
+      "response_time": 0.002812,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 207,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/visualization/demo/multi-vendor/data",
+      "description": "Demo Visualization Data",
+      "status_code": 401,
+      "response_time": 0.003095,
+      "content_type": "application/json",
+      "content_length": 33,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/static/css/style.css",
+      "description": "Main Stylesheet",
+      "status_code": 404,
+      "response_time": 0.003834,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 207,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/static/js/app.js",
+      "description": "Main JavaScript",
+      "status_code": 404,
+      "response_time": 0.007626,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 207,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/static/images/logo.png",
+      "description": "Logo Image",
+      "status_code": 404,
+      "response_time": 0.003557,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 207,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/favicon.ico",
+      "description": "Favicon",
+      "status_code": 204,
+      "response_time": 0.003055,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 0,
+      "success": false
+    }
+  ],
+  "redirects": [],
+  "api_endpoints": [
+    {
+      "url": "http://127.0.0.1:10000/api/health",
+      "description": "Health Check API",
+      "status_code": 200,
+      "response_time": 0.037553,
+      "content_type": "application/json",
+      "content_length": 303,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/devices",
+      "description": "Device List API",
+      "status_code": 200,
+      "response_time": 0.042991,
+      "content_type": "application/json",
+      "content_length": 79,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/networks",
+      "description": "Networks API",
+      "status_code": 200,
+      "response_time": 0.038922,
+      "content_type": "application/json",
+      "content_length": 80,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/organizations",
+      "description": "Organizations API",
+      "status_code": 200,
+      "response_time": 0.681868,
+      "content_type": "application/json",
+      "content_length": 7432,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/fortimanager/devices",
+      "description": "FortiManager Devices API",
+      "status_code": 400,
+      "response_time": 0.003555,
+      "content_type": "application/json",
+      "content_length": 65,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/fortimanager/config",
+      "description": "FortiManager Config API",
+      "status_code": 200,
+      "response_time": 0.003019,
+      "content_type": "application/json",
+      "content_length": 93,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/fortimanager/test",
+      "description": "FortiManager Test API",
+      "status_code": 405,
+      "response_time": 0.002964,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 153,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/fortimanager/all-devices",
+      "description": "All FortiManager Devices API",
+      "status_code": 404,
+      "response_time": 0.002812,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 207,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/visualization/demo/multi-vendor/data",
+      "description": "Demo Visualization Data",
+      "status_code": 401,
+      "response_time": 0.003095,
+      "content_type": "application/json",
+      "content_length": 33,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/ai-maintenance/status",
+      "description": "AI Maintenance Status",
+      "status_code": 200,
+      "response_time": 0.002571,
+      "content_type": "application/json",
+      "content_length": 160,
+      "success": true
+    },
+    {
+      "url": "http://127.0.0.1:10000/api/ai-maintenance/metrics",
+      "description": "AI Maintenance Metrics",
+      "status_code": 200,
+      "response_time": 0.002339,
+      "content_type": "application/json",
+      "content_length": 326,
+      "success": true
+    }
+  ],
+  "static_files": [
+    {
+      "url": "http://127.0.0.1:10000/static/css/style.css",
+      "description": "Main Stylesheet",
+      "status_code": 404,
+      "response_time": 0.003834,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 207,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/static/js/app.js",
+      "description": "Main JavaScript",
+      "status_code": 404,
+      "response_time": 0.007626,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 207,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/static/images/logo.png",
+      "description": "Logo Image",
+      "status_code": 404,
+      "response_time": 0.003557,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 207,
+      "success": false
+    },
+    {
+      "url": "http://127.0.0.1:10000/favicon.ico",
+      "description": "Favicon",
+      "status_code": 204,
+      "response_time": 0.003055,
+      "content_type": "text/html; charset=utf-8",
+      "content_length": 0,
+      "success": false
+    }
+  ],
+  "javascript_errors": [],
+  "missing_templates": []
+}

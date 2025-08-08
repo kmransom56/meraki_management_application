@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Topology - FortiGate Style</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --fortinet-red: #d43527;
+            --fortinet-blue: #0066cc;
+            --fortinet-green: #28a745;
+            --fortinet-orange: #fd7e14;
+        }
+
+        body {
+            font-family: 'Lato', sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            margin: 0;
+            padding: 0;
+        }
+
+        .topology-header {
+            background: linear-gradient(135deg, var(--fortinet-red), #b02e20);
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .topology-container {
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 80px);
+            background: #ffffff;
+            border-radius: 8px;
+            margin: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .topology-canvas {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: radial-gradient(circle at 50% 50%, #ffffff 0%, #f8f9fa 100%);
+        }
+
+        .device-group {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .device-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+
+        .device-icon:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            border-color: rgba(255,255,255,0.6);
+        }
+
+        .device-label {
+            margin-top: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            color: #333;
+            max-width: 80px;
+        }
+
+        .internet-gateway { background: linear-gradient(135deg, var(--fortinet-blue), #0052a3); }
+        .fortigate-firewall { background: linear-gradient(135deg, var(--fortinet-red), #b02e20); }
+        .fortimanager { background: linear-gradient(135deg, #6f42c1, #5a2d91); }
+        .meraki-switch { background: linear-gradient(135deg, var(--fortinet-green), #1e7e34); }
+        .meraki-ap { background: linear-gradient(135deg, var(--fortinet-orange), #e55a00); }
+
+        .connection-line {
+            position: absolute;
+            background: #ddd;
+            height: 3px;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+
+        .connection-line.active {
+            background: var(--fortinet-green);
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+        }
+
+        .site-zone {
+            position: absolute;
+            background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(248,249,250,0.9));
+            border: 2px dashed rgba(212,53,39,0.3);
+            border-radius: 20px;
+            z-index: 0;
+        }
+
+        .site-label {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: var(--fortinet-red);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 2;
+        }
+
+        .connection-label {
+            position: absolute;
+            background: rgba(255,255,255,0.95);
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 3px 8px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #333;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 5;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .stats-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 15px;
+            min-width: 200px;
+            z-index: 100;
+        }
+
+        .vlan-info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 15px;
+            z-index: 100;
+        }
+
+        .device-zone {
+            position: absolute;
+            border: 2px dashed #ddd;
+            border-radius: 15px;
+            background: rgba(255,255,255,0.3);
+            z-index: 0;
+        }
+
+        .zone-label {
+            position: absolute;
+            top: -15px;
+            left: 15px;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .loading-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+
+        .device-tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            z-index: 1000;
+            pointer-events: none;
+            max-width: 250px;
+        }
+    </style>
+</head>
+<body>
+    <div class="topology-header">
+        <h4 class="mb-0">
+            <i class="fas fa-project-diagram me-2"></i>
+            Network Topology - Professional FortiGate Style
+        </h4>
+    </div>
+
+    <div class="topology-container">
+        <div class="loading-spinner" id="loadingSpinner">
+            <div class="spinner-border text-danger" role="status"></div>
+            <div class="mt-2">Loading Network Topology...</div>
+        </div>
+
+        <div class="stats-panel" id="statsPanel" style="display: none;">
+            <h6 class="mb-3"><i class="fas fa-chart-bar me-2 text-danger"></i>Network Statistics</h6>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Total Devices</span>
+                <strong id="totalDevices">0</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Online</span>
+                <strong class="text-success" id="onlineDevices">0</strong>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span>Sites</span>
+                <strong id="totalSites">3</strong>
+            </div>
+        </div>
+
+        <div class="vlan-info-panel" id="vlanPanel" style="display: none;">
+            <h6 class="mb-3"><i class="fas fa-network-wired me-2 text-danger"></i>VLAN Information</h6>
+            <div id="vlanList"></div>
+        </div>
+
+        <div class="topology-canvas" id="topologyCanvas"></div>
+        <div class="device-tooltip" id="deviceTooltip" style="display: none;"></div>
+    </div>
+
+    <script>
+        class FortiGateTopology {
+            constructor() {
+                this.canvas = document.getElementById('topologyCanvas');
+                this.tooltip = document.getElementById('deviceTooltip');
+                this.devices = [];
+                this.init();
+            }
+
+            async init() {
+                await this.loadData();
+                this.createZones();
+                this.renderDevices();
+                this.renderConnections();
+                this.updateStats();
+                this.hideLoading();
+            }
+
+            async loadData() {
+                try {
+                    const response = await fetch('/api/fortimanager/devices/all');
+                    const data = await response.json();
+                    
+                    if (data.success && data.devices) {
+                        this.processRealData(data.devices);
+                    } else {
+                        this.loadCorrectedDemoData();
+                    }
+                } catch (error) {
+                    console.log('Loading corrected demo data due to API error:', error);
+                    this.loadCorrectedDemoData();
+                }
+            }
+
+            loadCorrectedDemoData() {
+                // Corrected architecture: FortiManagers manage FortiGates
+                this.devices = [
+                    { id: 'internet', name: 'Internet', type: 'internet', status: 'online', site: 'External', ip: '0.0.0.0' },
+                    
+                    // FortiManagers (Management Layer)
+                    { id: 'fm_arbys', name: 'ARBYS-FortiManager', type: 'fortimanager', status: 'online', site: 'ARBYS', ip: '10.128.144.132' },
+                    { id: 'fm_bww', name: 'BWW-FortiManager', type: 'fortimanager', status: 'online', site: 'BWW', ip: '10.128.145.4' },
+                    { id: 'fm_sonic', name: 'SONIC-FortiManager', type: 'fortimanager', status: 'online', site: 'SONIC', ip: '10.128.156.36' },
+                    
+                    // FortiGates (Managed by FortiManagers)
+                    { id: 'fg_arbys_01', name: 'ARBYS-FG-01', type: 'fortigate', status: 'online', site: 'ARBYS', ip: '10.128.144.1', managedBy: 'fm_arbys' },
+                    { id: 'fg_arbys_02', name: 'ARBYS-FG-02', type: 'fortigate', status: 'online', site: 'ARBYS', ip: '10.128.144.2', managedBy: 'fm_arbys' },
+                    { id: 'fg_bww_01', name: 'BWW-FG-01', type: 'fortigate', status: 'online', site: 'BWW', ip: '10.128.145.1', managedBy: 'fm_bww' },
+                    { id: 'fg_sonic_01', name: 'SONIC-FG-01', type: 'fortigate', status: 'online', site: 'SONIC', ip: '10.128.156.1', managedBy: 'fm_sonic' },
+                    
+                    // Network Infrastructure
+                    { id: 'sw_arbys', name: 'ARBYS-SW01', type: 'switch', status: 'online', site: 'ARBYS', ip: '10.128.144.10' },
+                    { id: 'ap_arbys', name: 'ARBYS-AP01', type: 'ap', status: 'online', site: 'ARBYS', ip: '10.128.144.20' }
+                ];
+
+                this.connections = [
+                    // Internet to FortiManagers
+                    { from: 'internet', to: 'fm_arbys', type: 'management' },
+                    { from: 'internet', to: 'fm_bww', type: 'management' },
+                    { from: 'internet', to: 'fm_sonic', type: 'management' },
+                    
+                    // FortiManagers manage FortiGates
+                    { from: 'fm_arbys', to: 'fg_arbys_01', type: 'management' },
+                    { from: 'fm_arbys', to: 'fg_arbys_02', type: 'management' },
+                    { from: 'fm_bww', to: 'fg_bww_01', type: 'management' },
+                    { from: 'fm_sonic', to: 'fg_sonic_01', type: 'management' },
+                    
+                    // FortiGates to network infrastructure
+                    { from: 'fg_arbys_01', to: 'sw_arbys', type: 'lan' },
+                    { from: 'fg_arbys_01', to: 'ap_arbys', type: 'lan' }
+                ];
+            }
+
+            processRealData(devices) {
+                // Process real FortiManager data with correct device roles
+                this.devices = [{ id: 'internet', name: 'Internet', type: 'internet', status: 'online', site: 'External', ip: '0.0.0.0' }];
+                
+                // Group devices by site and determine roles
+                const siteDevices = {};
+                devices.forEach(device => {
+                    const site = device.fortimanager_site || 'Unknown';
+                    if (!siteDevices[site]) siteDevices[site] = [];
+                    
+                    this.devices.push({
+                        id: device.name || `device_${Math.random()}`,
+                        name: device.name || 'Unknown Device',
+                        type: this.determineDeviceType(device),
+                        status: device.conn_status === 1 ? 'online' : 'offline',
+                        site: site,
+                        ip: device.ip || 'N/A',
+                        model: device.platform_str || 'Unknown',
+                        managedBy: site.toLowerCase() + '_fortimanager'
+                    });
+                });
+                
+                this.generateConnections();
+            }
+
+            determineDeviceType(device) {
+                const model = (device.platform_str || '').toLowerCase();
+                if (model.includes('fortimanager')) return 'fortimanager';
+                if (model.includes('fortigate')) return 'fortigate';
+                if (model.includes('fortiap')) return 'ap';
+                if (model.includes('fortiswitch')) return 'switch';
+                return 'unknown';
+            }
+
+            generateConnections() {
+                this.connections = [];
+                
+                // Create professional hierarchical connections
+                const internet = this.devices.find(d => d.type === 'internet');
+                
+                this.devices.forEach(device => {
+                    switch (device.type) {
+                        case 'fortimanager':
+                            // Connect FortiManager to Internet
+                            if (internet) {
+                                this.connections.push({ 
+                                    from: internet.id, 
+                                    to: device.id, 
+                                    type: 'management',
+                                    label: 'Management'
+                                });
+                            }
+                            break;
+                            
+                        case 'fortigate':
+                            // Connect FortiGate to FortiManager in same site
+                            const fortimanager = this.devices.find(d => 
+                                d.type === 'fortimanager' && d.site === device.site
+                            );
+                            if (fortimanager) {
+                                this.connections.push({ 
+                                    from: fortimanager.id, 
+                                    to: device.id, 
+                                    type: 'management',
+                                    label: 'Config Sync'
+                                });
+                            }
+                            break;
+                            
+                        case 'switch':
+                        case 'ap':
+                            // Connect switches and APs to FortiGate in same site
+                            const fortigate = this.devices.find(d => 
+                                d.type === 'fortigate' && d.site === device.site
+                            );
+                            if (fortigate) {
+                                this.connections.push({ 
+                                    from: fortigate.id, 
+                                    to: device.id, 
+                                    type: 'data',
+                                    label: device.type === 'switch' ? 'Trunk' : 'Wireless'
+                                });
+                            }
+                            break;
+                            
+                        default:
+                            // Connect end devices to switches or APs
+                            const siteDevices = this.devices.filter(d => 
+                                d.site === device.site && (d.type === 'switch' || d.type === 'ap')
+                            );
+                            if (siteDevices.length > 0) {
+                                const parent = siteDevices[0]; // Connect to first available switch/AP
+                                this.connections.push({ 
+                                    from: parent.id, 
+                                    to: device.id, 
+                                    type: 'access',
+                                    label: 'Access'
+                                });
+                            }
+                            break;
+                    }
+                });
+            }
+
+            createZones() {
+                const sites = ['ARBYS', 'BWW', 'SONIC'];
+                const canvasWidth = window.innerWidth - 100;
+                const siteWidth = canvasWidth / sites.length;
+                
+                sites.forEach((site, index) => {
+                    const siteBaseX = 50 + index * siteWidth;
+                    
+                    // Create site zone background
+                    const zone = document.createElement('div');
+                    zone.className = 'site-zone';
+                    zone.style.left = (siteBaseX - 50) + 'px';
+                    zone.style.top = '120px';
+                    zone.style.width = (siteWidth - 20) + 'px';
+                    zone.style.height = '700px';
+                    this.canvas.appendChild(zone);
+                    
+                    // Create site label
+                    const label = document.createElement('div');
+                    label.className = 'site-label';
+                    label.textContent = `${site} Site`;
+                    label.style.left = (siteBaseX - 30) + 'px';
+                    label.style.top = '105px';
+                    this.canvas.appendChild(label);
+                });
+            }
+
+            renderDevices() {
+                // First create zones
+                this.createZones();
+                
+                // Then render devices on top of zones
+                this.devices.forEach((device, index) => {
+                    const position = this.getDevicePosition(device, index);
+                    const deviceElement = this.createDevice(device, position);
+                    this.canvas.appendChild(deviceElement);
+                });
+            }
+
+            getDevicePosition(device, index) {
+                // Internet gateway at the very top center
+                if (device.type === 'internet') {
+                    return { x: window.innerWidth / 2 - 30, y: 50 };
+                }
+                
+                const sites = ['ARBYS', 'BWW', 'SONIC'];
+                const siteIndex = sites.indexOf(device.site);
+                const canvasWidth = window.innerWidth - 100;
+                const siteWidth = canvasWidth / sites.length;
+                const siteBaseX = 50 + siteIndex * siteWidth + siteWidth / 2;
+                
+                // Get all devices for this site to calculate positioning
+                const siteDevices = this.devices.filter(d => d.site === device.site && d.type !== 'internet');
+                const deviceTypeDevices = siteDevices.filter(d => d.type === device.type);
+                const deviceIndex = deviceTypeDevices.indexOf(device);
+                const totalOfType = deviceTypeDevices.length;
+                
+                // Professional hierarchical layout - FortiGate style
+                switch (device.type) {
+                    case 'fortimanager':
+                        // FortiManagers directly below internet, one per site
+                        return { x: siteBaseX - 30, y: 150 };
+                        
+                    case 'fortigate':
+                        // FortiGates below FortiManager in a horizontal line
+                        const fgSpacing = Math.min(100, siteWidth / (totalOfType + 1));
+                        const fgStartX = siteBaseX - ((totalOfType - 1) * fgSpacing / 2);
+                        return { x: fgStartX + deviceIndex * fgSpacing - 30, y: 280 };
+                        
+                    case 'switch':
+                        // Switches in left branch below FortiGates
+                        const swSpacing = 90;
+                        const swStartY = 410;
+                        return { x: siteBaseX - 120 - 30, y: swStartY + deviceIndex * swSpacing };
+                        
+                    case 'ap':
+                        // Access Points in right branch below FortiGates
+                        const apSpacing = 90;
+                        const apStartY = 410;
+                        return { x: siteBaseX + 120 - 30, y: apStartY + deviceIndex * apSpacing };
+                        
+                    default:
+                        // End devices spread below switches and APs
+                        const endDevicesPerSide = Math.ceil(totalOfType / 2);
+                        const isLeftSide = deviceIndex < endDevicesPerSide;
+                        const sideIndex = isLeftSide ? deviceIndex : deviceIndex - endDevicesPerSide;
+                        const endSpacing = 70;
+                        const endStartY = 650;
+                        const endX = isLeftSide ? siteBaseX - 180 : siteBaseX + 120;
+                        return { x: endX - 30, y: endStartY + sideIndex * endSpacing };
+                }
+            }
+
+            createDevice(device, position) {
+                const group = document.createElement('div');
+                group.className = 'device-group';
+                group.style.left = position.x + 'px';
+                group.style.top = position.y + 'px';
+                group.style.position = 'absolute';
+
+                const icon = document.createElement('div');
+                icon.className = `device-icon ${this.getDeviceClass(device.type)}`;
+                icon.innerHTML = this.getDeviceIcon(device.type);
+                
+                // Set device-specific sizing and styling
+                const iconSize = this.getDeviceIconSize(device.type);
+                icon.style.width = iconSize + 'px';
+                icon.style.height = iconSize + 'px';
+                icon.style.fontSize = (iconSize * 0.6) + 'px';
+                icon.style.display = 'flex';
+                icon.style.alignItems = 'center';
+                icon.style.justifyContent = 'center';
+                icon.style.borderRadius = '8px';
+                icon.style.cursor = 'pointer';
+                icon.style.transition = 'all 0.3s ease';
+                icon.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+
+                const label = document.createElement('div');
+                label.className = 'device-label';
+                label.textContent = device.name;
+                label.style.textAlign = 'center';
+                label.style.marginTop = '8px';
+                label.style.fontSize = '11px';
+                label.style.fontWeight = '500';
+                label.style.color = '#333';
+                label.style.maxWidth = (iconSize + 20) + 'px';
+                label.style.wordWrap = 'break-word';
+                label.style.lineHeight = '1.2';
+
+                // Add status indicator
+                const statusIndicator = document.createElement('div');
+                statusIndicator.className = 'status-indicator';
+                statusIndicator.style.position = 'absolute';
+                statusIndicator.style.top = '-3px';
+                statusIndicator.style.right = '-3px';
+                statusIndicator.style.width = '12px';
+                statusIndicator.style.height = '12px';
+                statusIndicator.style.borderRadius = '50%';
+                statusIndicator.style.border = '2px solid white';
+                statusIndicator.style.backgroundColor = device.status === 'online' ? '#28a745' : '#dc3545';
+
+                // Add hover effects
+                group.addEventListener('mouseenter', (e) => {
+                    icon.style.transform = 'scale(1.1)';
+                    icon.style.boxShadow = '0 4px 16px rgba(0,0,0,0.25)';
+                    this.showTooltip(e, device);
+                });
+                
+                group.addEventListener('mouseleave', () => {
+                    icon.style.transform = 'scale(1)';
+                    icon.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                    this.hideTooltip();
+                });
+
+                icon.appendChild(statusIndicator);
+                group.appendChild(icon);
+                group.appendChild(label);
+                return group;
+            }
+
+            getDeviceClass(type) {
+                const classes = {
+                    'internet': 'internet-gateway',
+                    'fortigate': 'fortigate-firewall',
+                    'fortimanager': 'fortimanager',
+                    'switch': 'meraki-switch',
+                    'ap': 'meraki-ap'
+                };
+                return classes[type] || 'meraki-switch';
+            }
+
+            getDeviceIcon(type) {
+                const icons = {
+                    'internet': '<i class="fas fa-globe"></i>',
+                    'fortigate': '<i class="fas fa-shield-alt"></i>',
+                    'fortimanager': '<i class="fas fa-cogs"></i>',
+                    'switch': '<i class="fas fa-network-wired"></i>',
+                    'ap': '<i class="fas fa-wifi"></i>'
+                };
+                return icons[type] || '<i class="fas fa-server"></i>';
+            }
+
+            renderConnections() {
+                // Clear existing connections
+                const existingLines = this.canvas.querySelectorAll('.connection-line, .connection-label');
+                existingLines.forEach(line => line.remove());
+                
+                this.connections.forEach(conn => {
+                    const fromDevice = this.devices.find(d => d.id === conn.from);
+                    const toDevice = this.devices.find(d => d.id === conn.to);
+                    
+                    if (!fromDevice || !toDevice) return;
+                    
+                    const fromPos = this.getDevicePosition(fromDevice, 0);
+                    const toPos = this.getDevicePosition(toDevice, 0);
+                    
+                    // Create connection line
+                    const line = document.createElement('div');
+                    line.className = `connection-line ${conn.type}`;
+                    
+                    const dx = toPos.x - fromPos.x;
+                    const dy = toPos.y - fromPos.y;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    
+                    // Position and style the line
+                    line.style.width = length + 'px';
+                    line.style.left = (fromPos.x + 30) + 'px';
+                    line.style.top = (fromPos.y + 30) + 'px';
+                    line.style.transform = `rotate(${angle}deg)`;
+                    line.style.transformOrigin = '0 50%';
+                    line.style.height = '3px';
+                    line.style.zIndex = '1';
+                    
+                    // Style based on connection type
+                    switch (conn.type) {
+                        case 'management':
+                            line.style.background = 'linear-gradient(90deg, #6f42c1, #5a2d91)';
+                            line.style.borderTop = '1px dashed #fff';
+                            break;
+                        case 'data':
+                            line.style.background = 'linear-gradient(90deg, var(--fortinet-green), #1e7e34)';
+                            break;
+                        case 'access':
+                            line.style.background = 'linear-gradient(90deg, var(--fortinet-orange), #e55a00)';
+                            line.style.height = '2px';
+                            break;
+                        default:
+                            line.style.background = '#ddd';
+                    }
+                    
+                    this.canvas.appendChild(line);
+                    
+                    // Add connection label
+                    if (conn.label) {
+                        const label = document.createElement('div');
+                        label.className = 'connection-label';
+                        label.textContent = conn.label;
+                        label.style.position = 'absolute';
+                        label.style.left = (fromPos.x + toPos.x) / 2 + 'px';
+                        label.style.top = (fromPos.y + toPos.y) / 2 - 10 + 'px';
+                        label.style.background = 'rgba(255,255,255,0.9)';
+                        label.style.padding = '2px 6px';
+                        label.style.borderRadius = '10px';
+                        label.style.fontSize = '10px';
+                        label.style.fontWeight = '600';
+                        label.style.color = '#333';
+                        label.style.boxShadow = '0 1px 3px rgba(0,0,0,0.2)';
+                        label.style.zIndex = '5';
+                        label.style.pointerEvents = 'none';
+                        
+                        this.canvas.appendChild(label);
+                    }
+                });
+            }
+
+            showTooltip(event, device) {
+                this.tooltip.innerHTML = `
+                    <div><strong>${device.name}</strong></div>
+                    <div>Type: ${device.type.toUpperCase()}</div>
+                    <div>Status: ${device.status.toUpperCase()}</div>
+                    <div>Site: ${device.site}</div>
+                    <div>IP: ${device.ip}</div>
+                `;
+                this.tooltip.style.display = 'block';
+                this.tooltip.style.left = (event.pageX + 10) + 'px';
+                this.tooltip.style.top = (event.pageY - 10) + 'px';
+            }
+
+            hideTooltip() {
+                this.tooltip.style.display = 'none';
+            }
+
+            updateStats() {
+                document.getElementById('totalDevices').textContent = this.devices.length;
+                document.getElementById('onlineDevices').textContent = this.devices.filter(d => d.status === 'online').length;
+                document.getElementById('statsPanel').style.display = 'block';
+                document.getElementById('vlanPanel').style.display = 'block';
+            }
+
+            hideLoading() {
+                document.getElementById('loadingSpinner').style.display = 'none';
+            }
+        }
+
+        // Initialize topology when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new FortiGateTopology();
+        });
+    </script>
+</body>
+</html>

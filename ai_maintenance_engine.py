@@ -241,7 +241,8 @@ class AIMaintenanceEngine:
                 logger.error(f"Failed to get device data: {error}")
                 return
             if response.ok:
-                devices = response.json()
+                data = response.json()
+                devices = data.get('devices', [])
                 
                 for device in devices:
                     device_id = device.get('id', device.get('serial', 'unknown'))
