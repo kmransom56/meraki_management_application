@@ -279,12 +279,16 @@
                 <p>Meraki, FortiGate, QSR device classification, comprehensive integration</p>
             </div>
             
-            <div class="status-card">
+            <div class="status-card" id="ai-maintenance-card">
                 <div class="icon">
-                    <i class="fas fa-robot"></i>
+                    <i class="fas fa-robot" id="ai-icon"></i>
                 </div>
-                <h3>AI-Powered</h3>
-                <p>Intelligent maintenance, predictive analytics, automated issue resolution</p>
+                <h3>AI Maintenance Engine</h3>
+                <p id="ai-status">Loading...</p>
+                <div id="ai-metrics" style="font-size: 0.9em; margin-top: 0.5rem; opacity: 0.8;">
+                    <div>Active Issues: <span id="active-issues">-</span></div>
+                    <div>Success Rate: <span id="success-rate">-</span></div>
+                </div>
             </div>
         </div>
 
@@ -335,10 +339,15 @@
         <div class="quick-actions">
             <h2><i class="fas fa-rocket"></i> Quick Actions</h2>
             <div class="action-buttons">
-                <a href="#" class="btn btn-primary" onclick="loadNetworks()">
-                    <i class="fas fa-network-wired"></i>
-                    View Networks
-                </a>
+                <button class="btn btn-primary" onclick="loadNetworks()">
+                    <i class="fas fa-sitemap"></i> View Networks
+                </button>
+                <button class="btn btn-success" onclick="window.location.href='/demo/visualization'">
+                    <i class="fas fa-star"></i> Demo Enhanced Features
+                </button>
+                <button class="btn btn-warning" onclick="window.location.href='/fortimanager/config'">
+                    <i class="fas fa-server"></i> FortiManager Config
+                </button>
                 <a href="/ai_maintenance" class="btn btn-success">
                     <i class="fas fa-robot"></i>
                     AI Maintenance
@@ -418,6 +427,12 @@
                         <button onclick="window.location.href='/settings'" class="btn btn-secondary">
                             <i class="fas fa-cog"></i> Go to Settings
                         </button>
+                        <a href="/demo/visualization" class="btn btn-info btn-sm">
+                            <i class="fas fa-eye"></i> Demo Visualization
+                        </a>
+                        <a href="/fortimanager/config" class="btn btn-warning btn-sm">
+                            <i class="fas fa-server"></i> FortiManager Config
+                        </a>
                         <button onclick="closeModal()" class="btn btn-secondary">
                             <i class="fas fa-times"></i> Cancel
                         </button>
@@ -610,8 +625,61 @@
             window.location.href = `/device_inventory/${networkId}`;
         }
 
+        // Load AI Maintenance Engine status
+        function loadAIMaintenanceStatus() {
+            fetch('/api/ai_maintenance/metrics')
+                .then(response => response.json())
+                .then(data => {
+                    const statusElement = document.getElementById('ai-status');
+                    const iconElement = document.getElementById('ai-icon');
+                    const activeIssuesElement = document.getElementById('active-issues');
+                    const successRateElement = document.getElementById('success-rate');
+                    const cardElement = document.getElementById('ai-maintenance-card');
+                    
+                    if (data.status === 'online') {
+                        statusElement.textContent = 'Online - Monitoring Active';
+                        statusElement.style.color = '#28a745';
+                        iconElement.style.color = '#28a745';
+                        cardElement.style.borderLeft = '4px solid #28a745';
+                    } else if (data.status === 'offline') {
+                        statusElement.textContent = 'Offline - Not Monitoring';
+                        statusElement.style.color = '#dc3545';
+                        iconElement.style.color = '#dc3545';
+                        cardElement.style.borderLeft = '4px solid #dc3545';
+                    } else {
+                        statusElement.textContent = 'Error - Check Logs';
+                        statusElement.style.color = '#ffc107';
+                        iconElement.style.color = '#ffc107';
+                        cardElement.style.borderLeft = '4px solid #ffc107';
+                    }
+                    
+                    activeIssuesElement.textContent = data.active_issues;
+                    successRateElement.textContent = data.auto_fix_success_rate;
+                })
+                .catch(error => {
+                    console.error('Error loading AI maintenance status:', error);
+                    const statusElement = document.getElementById('ai-status');
+                    const iconElement = document.getElementById('ai-icon');
+                    const cardElement = document.getElementById('ai-maintenance-card');
+                    
+                    statusElement.textContent = 'Connection Error';
+                    statusElement.style.color = '#dc3545';
+                    iconElement.style.color = '#dc3545';
+                    cardElement.style.borderLeft = '4px solid #dc3545';
+                    
+                    document.getElementById('active-issues').textContent = 'Error';
+                    document.getElementById('success-rate').textContent = 'Error';
+                });
+        }
+
         // Add professional loading animations and interactions
         document.addEventListener('DOMContentLoaded', function() {
+            // Load AI maintenance status immediately
+            loadAIMaintenanceStatus();
+            
+            // Refresh AI maintenance status every 30 seconds
+            setInterval(loadAIMaintenanceStatus, 30000);
+            
             // Animate cards on load
             const cards = document.querySelectorAll('.status-card, .feature-card');
             cards.forEach((card, index) => {

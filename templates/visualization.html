@@ -822,51 +822,182 @@
             return iconMap[deviceType] || iconMap['unknown'];
         }
 
-        // Load topology data
-        var networkId = '{{ network_id }}';
-        // Try multi-vendor endpoint first, fallback to regular endpoint
-        var apiUrl = networkId ? '/api/visualization/' + networkId + '/multi-vendor/data' : '/api/visualization/data';
-        fetch(apiUrl)
-            .then(response => {
-                if (!response.ok && response.status === 503) {
-                    // FortiGate integration not available, try regular endpoint
-                    return fetch('/api/visualization/' + networkId + '/data');
+        // Load topology data with authentication handling
+        function loadTopologyData() {
+            var networkId = '{{ network_id }}';
+            // Try multi-vendor endpoint first, fallback to regular endpoint
+            var apiUrl = networkId ? '/api/visualization/' + networkId + '/multi-vendor/data' : '/api/visualization/data';
+            
+            console.log('Loading topology data from:', apiUrl);
+            
+            fetch(apiUrl)
+                .then(response => {
+                    if (response.status === 401) {
+                        // API key not set - show authentication modal
+                        showApiKeyModal();
+                        return null;
+                    }
+                    if (!response.ok && response.status === 503) {
+                        // FortiGate integration not available, try regular endpoint
+                        return fetch('/api/visualization/' + networkId + '/data');
+                    }
+                    return response;
+                })
+                .then(response => {
+                    if (!response) return; // Authentication modal shown
+                    
+                    if (response.status === 401) {
+                        // Still no API key after fallback
+                        showApiKeyModal();
+                        return;
+                    }
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data) return; // Authentication modal shown
+                    
+                    console.log('✅ Received topology data:', data);
+                    
+                    if (data.error) {
+                        if (data.error.includes('API key')) {
+                            showApiKeyModal();
+                            return;
+                        }
+                        throw new Error(data.error);
+                    }
+                
+                    allNodes = data.nodes || [];
+                    allLinks = data.edges || [];
+                    
+                    console.log(`Loaded ${allNodes.length} nodes and ${allLinks.length} edges`);
+                    
+                    if (allNodes.length === 0) {
+                        document.getElementById('topology').innerHTML = 
+                            '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: white; font-size: 1.2rem;">' +
+                            '<div style="text-align: center;"><i class="fas fa-info-circle"></i><br><br>No devices found in this network.<br><small>Make sure you have selected a network with devices.</small></div></div>';
+                        return;
+                    }
+                    
+                    initializeVisualization();
+                })
+                .catch(error => {
+                    console.error('Error loading topology data:', error);
+                    if (error.message.includes('API key') || error.message.includes('401')) {
+                        showApiKeyModal();
+                    } else {
+                        document.getElementById('topology').innerHTML = 
+                            '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: white; font-size: 1.2rem;">' +
+                            '<div style="text-align: center;"><i class="fas fa-exclamation-triangle"></i><br><br>Error loading topology data<br><small>' + error.message + '</small></div></div>';
+                    }
+                });
+        }
+        
+        // API Key Modal for Authentication
+        function showApiKeyModal() {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.8); display: flex; align-items: center;
+                justify-content: center; z-index: 2000;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white; padding: 2rem; border-radius: 8px;
+                max-width: 500px; width: 90%;
+            `;
+            
+            content.innerHTML = `
+                <h3 style="color: var(--fortinet-red); margin-bottom: 1rem;">
+                    <i class="fas fa-key"></i> API Key Required
+                </h3>
+                <p style="margin-bottom: 1.5rem; color: #666;">
+                    To view network topology data, please enter your Meraki Dashboard API key:
+                </p>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">API Key:</label>
+                    <input type="password" id="modalApiKey" placeholder="Enter your Meraki API key" 
+                           style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-family: monospace;">
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button onclick="closeApiKeyModal()" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Cancel
+                    </button>
+                    <button onclick="validateApiKeyFromModal()" style="padding: 0.5rem 1rem; background: var(--fortinet-red); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-check"></i> Validate & Load
+                    </button>
+                </div>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            // Focus on input
+            setTimeout(() => {
+                document.getElementById('modalApiKey').focus();
+            }, 100);
+            
+            // Allow Enter key to submit
+            document.getElementById('modalApiKey').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    validateApiKeyFromModal();
                 }
-                return response;
+            });
+        }
+        
+        function closeApiKeyModal() {
+            const modal = document.querySelector('div[style*="position: fixed"]');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        function validateApiKeyFromModal() {
+            const apiKey = document.getElementById('modalApiKey').value.trim();
+            if (!apiKey) {
+                alert('Please enter an API key');
+                return;
+            }
+            
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validating...';
+            btn.disabled = true;
+            
+            // Validate API key
+            fetch('/api/validate_key', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    api_key: apiKey,
+                    api_mode: 'custom'
+                })
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Received topology data:', data);
-                
-                if (data.error) {
-                    throw new Error(data.error);
+                if (data.success) {
+                    // API key validated, close modal and reload topology
+                    closeApiKeyModal();
+                    setTimeout(() => loadTopologyData(), 500);
+                } else {
+                    alert('Invalid API key: ' + (data.error || 'Please check your key and try again'));
                 }
-                
-                allNodes = data.nodes || [];
-                allLinks = data.edges || [];
-                
-                console.log(`Loaded ${allNodes.length} nodes and ${allLinks.length} edges`);
-                
-                if (allNodes.length === 0) {
-                    document.getElementById('topology').innerHTML = 
-                        '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: white; font-size: 1.2rem;">' +
-                        '<div style="text-align: center;"><i class="fas fa-info-circle"></i><br><br>No devices found in this network.<br><small>Make sure you have selected a network with devices.</small></div></div>';
-                    return;
-                }
-                
-                initializeVisualization();
             })
             .catch(error => {
-                console.error('Error loading topology data:', error);
-                document.getElementById('topology').innerHTML = 
-                    '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: white; font-size: 1.2rem;">' +
-                    '<div style="text-align: center;"><i class="fas fa-exclamation-triangle"></i><br><br>Error loading topology data<br><small>' + error.message + '</small></div></div>';
+                console.error('API key validation error:', error);
+                alert('Error validating API key. Please try again.');
+            })
+            .finally(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             });
+        }
 
         function initializeVisualization() {
             const width = window.innerWidth - 280;
@@ -1573,6 +1704,12 @@
                 row.style.display = matchesSearch && matchesFilter ? '' : 'none';
             });
         }
+
+        // Initialize page when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Initializing enhanced network topology visualization...');
+            loadTopologyData();
+        });
 
         // Handle window resize
         window.addEventListener('resize', function() {

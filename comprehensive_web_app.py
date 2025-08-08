@@ -10,7 +10,7 @@ import json
 import logging
 import traceback
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import uuid
 import threading
 import time
@@ -27,6 +27,18 @@ except ImportError:
     print("[INFO] python-dotenv not installed, using system environment variables only")
 except Exception as e:
     print(f"[WARNING] Could not load .env file: {e}")
+
+# Import AI Maintenance Engine
+try:
+    from ai_maintenance_engine import initialize_ai_maintenance, get_ai_maintenance_engine
+    AI_MAINTENANCE_AVAILABLE = True
+    print("[OK] AI Maintenance Engine imported successfully")
+except ImportError as e:
+    AI_MAINTENANCE_AVAILABLE = False
+    print(f"[WARNING] AI Maintenance Engine not available: {e}")
+except Exception as e:
+    AI_MAINTENANCE_AVAILABLE = False
+    print(f"[ERROR] AI Maintenance Engine import error: {e}")
 
 # Import SSL fixes for corporate environments
 try:
@@ -174,6 +186,11 @@ def visualization_index():
                          cache_bust=timestamp,
                          qsr_mode=app_config['qsr_mode'])
 
+@app.route('/visualization/')
+def visualization_index_slash():
+    """Visualization index page with trailing slash"""
+    return visualization_index()
+
 @app.route('/visualization/<network_id>')
 def visualization_page(network_id):
     """Enhanced network topology visualization page"""
@@ -183,6 +200,188 @@ def visualization_page(network_id):
                          timestamp=timestamp,
                          cache_bust=timestamp,
                          qsr_mode=app_config['qsr_mode'])
+
+@app.route('/demo/visualization')
+def demo_visualization():
+    """Demo visualization page with enhanced features"""
+    return render_template('demo_visualization.html')
+
+@app.route('/fortimanager/config')
+def fortimanager_config_page():
+    """FortiManager configuration page"""
+    return render_template('fortimanager_config.html')
+
+@app.route('/api/fortimanager/test', methods=['POST'])
+def test_fortimanager_connection():
+    """Test FortiManager connection"""
+    try:
+        data = request.get_json()
+        host = data.get('host')
+        username = data.get('username')
+        password = data.get('password')
+        port = data.get('port', 443)
+        
+        if not all([host, username, password]):
+            return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+        
+        # Test FortiManager connection
+        from fortimanager_api import FortiManagerAPI
+        fm = FortiManagerAPI(host, username, password, port)
+        
+        if fm.login():
+            # Get device count for verification
+            devices = fm.get_managed_devices()
+            device_count = len(devices) if devices else 0
+            fm.logout()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Connection successful',
+                'device_count': device_count
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Authentication failed'
+            }), 401
+            
+    except Exception as e:
+        logger.error(f"FortiManager connection test error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Connection error: {str(e)}'
+        }), 500
+
+@app.route('/api/fortimanager/configure', methods=['POST'])
+def configure_fortimanager():
+    """Save FortiManager configuration"""
+    try:
+        data = request.get_json()
+        
+        # Encrypt and store configuration
+        config = {
+            'host': data.get('host'),
+            'username': data.get('username'),
+            'password': data.get('password'),
+            'port': data.get('port', 443)
+        }
+        
+        # Store in session (in production, use encrypted database storage)
+        session['fortimanager_config'] = config
+        session.permanent = True
+        
+        logger.info(f"FortiManager configuration saved for host: {config['host']}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Configuration saved successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"FortiManager configuration error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Configuration error: {str(e)}'
+        }), 500
+
+@app.route('/api/fortimanager/config', methods=['GET'])
+def get_fortimanager_config():
+    """Get current FortiManager configuration (without password)"""
+    try:
+        config = session.get('fortimanager_config', {})
+        
+        # Return config without password for security
+        safe_config = {
+            'host': config.get('host', ''),
+            'username': config.get('username', ''),
+            'port': config.get('port', 443)
+        }
+        
+        return jsonify({
+            'success': True,
+            'config': safe_config
+        })
+        
+    except Exception as e:
+        logger.error(f"Get FortiManager config error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/fortimanager/devices', methods=['GET'])
+def get_fortimanager_devices():
+    """Get managed devices from FortiManager"""
+    try:
+        if 'fortimanager_config' not in session:
+            return jsonify({
+                'success': False,
+                'error': 'FortiManager not configured'
+            }), 400
+        
+        config = session['fortimanager_config']
+        from fortimanager_api import FortiManagerAPI
+        fm = FortiManagerAPI(config['host'], config['username'], config['password'], config.get('port', 443))
+        
+        if fm.login():
+            devices = fm.get_managed_devices()
+            fm.logout()
+            
+            return jsonify({
+                'success': True,
+                'devices': devices or []
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'FortiManager authentication failed'
+            }), 401
+            
+    except Exception as e:
+        logger.error(f"Get FortiManager devices error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/site/configure', methods=['POST'])
+def configure_site_settings():
+    """Save site-specific configuration"""
+    try:
+        data = request.get_json()
+        
+        site_config = {
+            'arbys_layout': data.get('arbys_layout', 'hierarchical'),
+            'sonic_layout': data.get('sonic_layout', 'hierarchical')
+        }
+        
+        session['site_config'] = site_config
+        session.permanent = True
+        
+        logger.info(f"Site configuration saved: {site_config}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Site configuration saved successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Site configuration error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/demo/visualization')
+def demo_visualization_page():
+    """Demo visualization page showcasing enhanced features with sample data"""
+    timestamp = int(time.time())
+    return render_template('demo_visualization.html', 
+                         network_id='demo_network',
+                         network_name='Demo Restaurant Network',
+                         timestamp=timestamp,
+                         cache_bust=timestamp,
+                         qsr_mode=True)
 
 @app.route('/device_inventory/<network_id>')
 def device_inventory_page(network_id):
@@ -200,6 +399,231 @@ def ai_maintenance_dashboard():
     return render_template('ai_maintenance.html',
                          timestamp=timestamp,
                          cache_bust=timestamp)
+
+@app.route('/api/ai_maintenance/status')
+def get_ai_maintenance_status():
+    """Get AI maintenance engine status and health report"""
+    try:
+        if not AI_MAINTENANCE_AVAILABLE:
+            return jsonify({
+                'available': False,
+                'status': 'offline',
+                'message': 'AI Maintenance Engine not available'
+            })
+        
+        ai_engine = get_ai_maintenance_engine()
+        if ai_engine:
+            health_report = ai_engine.get_health_report()
+            return jsonify({
+                'available': True,
+                'status': 'online' if health_report['monitoring_active'] else 'offline',
+                'health_report': health_report
+            })
+        else:
+            return jsonify({
+                'available': False,
+                'status': 'offline',
+                'message': 'AI Maintenance Engine not initialized'
+            })
+    
+    except Exception as e:
+        logger.error(f"Error getting AI maintenance status: {e}")
+        return jsonify({
+            'available': False,
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/visualization/<network_id>/demo/data')
+def get_demo_visualization_data(network_id):
+    """Demo endpoint with sample data to showcase enhanced visualization features"""
+    try:
+        # Sample data that demonstrates all enhanced features
+        demo_data = {
+            'nodes': [
+                {
+                    'id': 'internet',
+                    'label': 'Internet Gateway',
+                    'group': 'internet',
+                    'size': 35,
+                    'vendor': 'Internet',
+                    'model': 'Gateway',
+                    'status': 'online',
+                    'vlans': [{'id': '1', 'name': 'Management'}]
+                },
+                {
+                    'id': 'fortigate-1',
+                    'label': 'FortiGate-100F',
+                    'group': 'fortigate',
+                    'size': 32,
+                    'vendor': 'Fortinet',
+                    'model': 'FortiGate-100F',
+                    'status': 'online',
+                    'ip': '192.168.1.1',
+                    'mac': '00:09:0F:AA:BB:CC',
+                    'firmware': 'v7.4.1',
+                    'vlans': [
+                        {'id': '1', 'name': 'Management'},
+                        {'id': '100', 'name': 'Guest WiFi'},
+                        {'id': '200', 'name': 'Staff Network'}
+                    ]
+                },
+                {
+                    'id': 'switch-1',
+                    'label': 'MS220-24P',
+                    'group': 'switch',
+                    'size': 30,
+                    'vendor': 'Cisco Meraki',
+                    'model': 'MS220-24P',
+                    'status': 'online',
+                    'ip': '192.168.1.10',
+                    'mac': '88:15:44:AA:BB:CC',
+                    'firmware': 'MS 16.16',
+                    'vlans': [
+                        {'id': '100', 'name': 'Guest WiFi'},
+                        {'id': '200', 'name': 'Staff Network'},
+                        {'id': '300', 'name': 'POS Network'}
+                    ]
+                },
+                {
+                    'id': 'ap-1',
+                    'label': 'MR46-Dining',
+                    'group': 'wireless',
+                    'size': 28,
+                    'vendor': 'Cisco Meraki',
+                    'model': 'MR46',
+                    'status': 'online',
+                    'ip': '192.168.1.20',
+                    'mac': '88:15:44:DD:EE:FF',
+                    'firmware': 'MR 29.7',
+                    'vlans': [
+                        {'id': '100', 'name': 'Guest WiFi'},
+                        {'id': '200', 'name': 'Staff Network'}
+                    ]
+                },
+                {
+                    'id': 'client-1',
+                    'label': 'POS-Terminal-1',
+                    'group': 'client',
+                    'size': 25,
+                    'vendor': 'Toast',
+                    'model': 'POS Terminal',
+                    'status': 'online',
+                    'ip': '192.168.200.50',
+                    'mac': 'AA:BB:CC:DD:EE:01',
+                    'parent_device': 'MS220-24P',
+                    'vlans': [{'id': '300', 'name': 'POS Network'}]
+                },
+                {
+                    'id': 'client-2',
+                    'label': 'Kitchen-Display',
+                    'group': 'client',
+                    'size': 25,
+                    'vendor': 'Kitchen Display Systems',
+                    'model': 'KDS-42',
+                    'status': 'online',
+                    'ip': '192.168.200.51',
+                    'mac': 'AA:BB:CC:DD:EE:02',
+                    'parent_device': 'MS220-24P',
+                    'vlans': [{'id': '300', 'name': 'POS Network'}]
+                }
+            ],
+            'edges': [
+                {
+                    'source': 'internet',
+                    'target': 'fortigate-1',
+                    'type': 'uplink',
+                    'vlan': '1',
+                    'vlanName': 'Management'
+                },
+                {
+                    'source': 'fortigate-1',
+                    'target': 'switch-1',
+                    'type': 'trunk',
+                    'vlan': 'multiple',
+                    'vlanName': 'Trunk (VLANs 100,200,300)'
+                },
+                {
+                    'source': 'switch-1',
+                    'target': 'ap-1',
+                    'type': 'access',
+                    'vlan': '100',
+                    'vlanName': 'Guest WiFi'
+                },
+                {
+                    'source': 'switch-1',
+                    'target': 'client-1',
+                    'type': 'access',
+                    'vlan': '300',
+                    'vlanName': 'POS Network'
+                },
+                {
+                    'source': 'switch-1',
+                    'target': 'client-2',
+                    'type': 'access',
+                    'vlan': '300',
+                    'vlanName': 'POS Network'
+                }
+            ],
+            'stats': {
+                'total_devices': 6,
+                'online_devices': 6,
+                'offline_devices': 0,
+                'total_vlans': 4,
+                'total_connections': 5
+            }
+        }
+        
+        logger.info(f"Returning demo topology data with {len(demo_data['nodes'])} nodes and {len(demo_data['edges'])} edges")
+        return jsonify(demo_data)
+        
+    except Exception as e:
+        logger.error(f"Error generating demo visualization data: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/ai_maintenance/metrics')
+def get_ai_maintenance_metrics():
+    """Get AI maintenance engine metrics for dashboard"""
+    try:
+        if not AI_MAINTENANCE_AVAILABLE:
+            return jsonify({
+                'monitoring_active': False,
+                'active_issues': 'N/A',
+                'resolved_issues': 'N/A',
+                'auto_fix_success_rate': 'N/A',
+                'status': 'offline'
+            })
+        
+        ai_engine = get_ai_maintenance_engine()
+        if ai_engine:
+            health_report = ai_engine.get_health_report()
+            return jsonify({
+                'monitoring_active': health_report['monitoring_active'],
+                'active_issues': health_report['active_issues'],
+                'resolved_issues': health_report['resolved_issues'],
+                'auto_fix_success_rate': f"{health_report['auto_fix_success_rate']:.1%}",
+                'status': 'online' if health_report['monitoring_active'] else 'offline',
+                'issues_by_severity': health_report['issues_by_severity'],
+                'recent_issues': health_report['recent_issues']
+            })
+        else:
+            return jsonify({
+                'monitoring_active': False,
+                'active_issues': 'N/A',
+                'resolved_issues': 'N/A',
+                'auto_fix_success_rate': 'N/A',
+                'status': 'offline'
+            })
+    
+    except Exception as e:
+        logger.error(f"Error getting AI maintenance metrics: {e}")
+        return jsonify({
+            'monitoring_active': False,
+            'active_issues': 'Error',
+            'resolved_issues': 'Error',
+            'auto_fix_success_rate': 'Error',
+            'status': 'error'
+        }), 500
 
 @app.route('/settings')
 def settings_page():
@@ -2320,6 +2744,17 @@ if __name__ == '__main__':
     print("[READY] Professional-grade network management platform ready")
     print("[CACHE] Cache-busting enabled for development")
     print("[SECURITY] Session management and API key encryption active")
+    
+    # Initialize AI Maintenance Engine
+    if AI_MAINTENANCE_AVAILABLE:
+        try:
+            ai_engine = initialize_ai_maintenance()
+            print("[AI] AI Maintenance Engine initialized and monitoring started")
+        except Exception as e:
+            print(f"[ERROR] Failed to initialize AI Maintenance Engine: {e}")
+    else:
+        print("[WARNING] AI Maintenance Engine not available")
+    
     print("=" * 70)
     
     # Start the Flask application

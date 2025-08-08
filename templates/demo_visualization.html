@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Demo Network Topology - {{ network_name }}</title>
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+    
+    <!-- d3.js visualization library for network topology -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Lato font family like FortiGate -->
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* FortiGate-inspired color scheme */
+            --fortinet-red: #d43527;
+            --fortinet-dark-red: #b02e20;
+            --fortinet-gray: #f5f5f5;
+            --fortinet-dark-gray: #333333;
+            --fortinet-light-gray: #e8e8e8;
+            --fortinet-blue: #0066cc;
+            --fortinet-green: #28a745;
+            --fortinet-orange: #fd7e14;
+            --background-level0: 248, 249, 250;
+            --background-level1: 255, 255, 255;
+            --background-level2: 245, 245, 245;
+            --text-primary: 51, 51, 51;
+            --text-secondary: 102, 102, 102;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Lato', Helvetica, Arial, sans-serif;
+            font-weight: 400;
+            background-color: rgb(var(--background-level0));
+            color: rgb(var(--text-primary));
+            font-size: 15px;
+            overflow: hidden;
+        }
+
+        .header {
+            background: rgb(var(--background-level1));
+            border-bottom: 1px solid rgb(var(--background-level2));
+            padding: 16px 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            position: relative;
+            min-height: 60px;
+        }
+
+        .header h1 {
+            margin: 0;
+            color: var(--fortinet-red);
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1 i {
+            color: var(--fortinet-red);
+            font-size: 1.3rem;
+        }
+
+        .demo-banner {
+            background: linear-gradient(135deg, var(--fortinet-red), var(--fortinet-dark-red));
+            color: white;
+            padding: 8px 16px;
+            text-align: center;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-weight: 400;
+            color: rgb(var(--text-primary));
+            white-space: nowrap;
+            font-size: 14px;
+        }
+
+        .btn-fortinet {
+            background: var(--fortinet-red);
+            border-color: var(--fortinet-red);
+            color: white;
+            font-family: 'Lato', sans-serif;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .btn-fortinet:hover {
+            background: var(--fortinet-dark-red);
+            border-color: var(--fortinet-dark-red);
+            color: white;
+        }
+
+        .main-content {
+            display: flex;
+            height: calc(100vh - 120px);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: rgb(var(--background-level1));
+            border-right: 1px solid rgb(var(--background-level2));
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .stat-item {
+            background: rgb(var(--background-level0));
+            border: 1px solid rgb(var(--background-level2));
+            padding: 16px;
+            margin: 12px 0;
+            border-radius: 4px;
+            text-align: center;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .stat-item:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--fortinet-red);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: rgb(var(--text-secondary));
+            font-weight: 400;
+        }
+
+        .legend {
+            margin-top: 20px;
+        }
+
+        .legend h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: rgb(var(--text-primary));
+            margin-bottom: 16px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            margin-right: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .legend-text {
+            font-size: 14px;
+            color: rgb(var(--text-primary));
+            font-weight: 400;
+        }
+
+        #topology {
+            width: calc(100vw - 280px);
+            height: calc(100vh - 120px);
+            background: rgb(var(--background-level1));
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(51, 51, 51, 0.95);
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 300px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .tooltip-section {
+            margin-bottom: 10px;
+        }
+
+        .tooltip-label {
+            font-weight: 600;
+            color: #ccc;
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+
+        .tooltip-value {
+            color: white;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .vlan-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        .vlan-item {
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: #e8e8e8;
+        }
+
+        .node-label {
+            font-family: 'Lato', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            fill: rgb(var(--text-primary));
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        .link {
+            stroke-opacity: 0.8;
+            stroke-width: 2px;
+            transition: stroke-width 0.3s ease;
+        }
+
+        .link:hover {
+            stroke-opacity: 1;
+            stroke-width: 3px;
+        }
+
+        .link-label {
+            font-family: 'Lato', sans-serif;
+            font-size: 11px;
+            fill: rgb(var(--text-secondary));
+            text-anchor: middle;
+            pointer-events: none;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .enhanced-features {
+            background: rgba(40, 167, 69, 0.1);
+            border: 1px solid #28a745;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+
+        .enhanced-features h5 {
+            color: #28a745;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .enhanced-features ul {
+            margin: 0;
+            padding-left: 16px;
+            font-size: 0.85rem;
+            color: rgb(var(--text-secondary));
+        }
+
+        .enhanced-features li {
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-banner">
+        <i class="fas fa-star"></i> DEMO MODE: Showcasing Enhanced Visualization Features
+    </div>
+    
+    <div class="header">
+        <h1>
+            <i class="fas fa-sitemap"></i>
+            {{ network_name }} - Enhanced Topology
+        </h1>
+        <div class="controls">
+            <div class="control-group">
+                <label for="layoutSelect">Layout:</label>
+                <select id="layoutSelect" class="form-control form-control-sm">
+                    <option value="hierarchical">Hierarchical (QSR)</option>
+                    <option value="force">Force-Directed</option>
+                    <option value="radial">Radial</option>
+                </select>
+            </div>
+            <button class="btn btn-fortinet btn-sm" onclick="window.location.href='/'">
+                <i class="fas fa-home"></i> Dashboard
+            </button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="sidebar">
+            <div class="enhanced-features">
+                <h5><i class="fas fa-magic"></i> Enhanced Features</h5>
+                <ul>
+                    <li>30px device icons (enhanced from 20px)</li>
+                    <li>Visible VLAN connection labels</li>
+                    <li>Detailed device tooltips</li>
+                    <li>Port and connection information</li>
+                    <li>FortiGate-inspired styling</li>
+                    <li>QSR device classification</li>
+                </ul>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number" id="deviceCount">-</div>
+                    <div class="stat-label">Devices</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="connectionCount">-</div>
+                    <div class="stat-label">Connections</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="vlanCount">-</div>
+                    <div class="stat-label">VLANs</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="onlineCount">-</div>
+                    <div class="stat-label">Online</div>
+                </div>
+            </div>
+
+            <div class="legend">
+                <h4>Device Types</h4>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #6c757d;"></div>
+                    <div class="legend-text">Internet Gateway</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #d43527;"></div>
+                    <div class="legend-text">FortiGate Firewall</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #28a745;"></div>
+                    <div class="legend-text">Network Switch</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #fd7e14;"></div>
+                    <div class="legend-text">Wireless AP</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #17a2b8;"></div>
+                    <div class="legend-text">Client Device</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="topology"></div>
+    </div>
+
+    <div class="tooltip" id="tooltip" style="display: none;"></div>
+
+    <script>
+        // Enhanced visualization with all features
+        let svg, g, simulation;
+        let node, link, nodeLabels, linkLabels;
+        let currentLayout = 'hierarchical';
+        let topologyData = null;
+
+        // Device colors matching FortiGate style
+        const deviceColors = {
+            'internet': '#6c757d',
+            'fortigate': '#d43527',
+            'appliance': '#dc3545',
+            'switch': '#28a745',
+            'wireless': '#fd7e14',
+            'fortiap': '#ff6b35',
+            'client': '#17a2b8',
+            'unknown': '#6c757d'
+        };
+
+        // Device icons (Font Awesome Unicode)
+        const deviceIcons = {
+            'internet': '\uf0ac',  // fa-globe
+            'fortigate': '\uf06d', // fa-fire-alt
+            'appliance': '\uf3ed', // fa-shield-alt
+            'switch': '\uf6ff',    // fa-ethernet
+            'wireless': '\uf1eb',  // fa-wifi
+            'fortiap': '\uf519',   // fa-broadcast-tower
+            'client': '\uf108',    // fa-desktop
+            'unknown': '\uf059'    // fa-question-circle
+        };
+
+        // Initialize visualization
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeVisualization();
+            loadTopologyData();
+            
+            // Layout selector
+            document.getElementById('layoutSelect').addEventListener('change', function() {
+                currentLayout = this.value;
+                if (topologyData) {
+                    updateVisualization();
+                }
+            });
+        });
+
+        function initializeVisualization() {
+            const width = window.innerWidth - 280;
+            const height = window.innerHeight - 120;
+
+            svg = d3.select('#topology')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+
+            g = svg.append('g');
+
+            // Add zoom behavior
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on('zoom', function(event) {
+                    g.attr('transform', event.transform);
+                });
+
+            svg.call(zoom);
+        }
+
+        function loadTopologyData() {
+            console.log('Loading enhanced demo topology data...');
+            
+            fetch(`/api/visualization/{{ network_id }}/demo/data`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('✅ Enhanced topology data loaded:', data);
+                    topologyData = data;
+                    updateStats(data.stats);
+                    updateVisualization();
+                })
+                .catch(error => {
+                    console.error('❌ Error loading topology data:', error);
+                });
+        }
+
+        function updateStats(stats) {
+            document.getElementById('deviceCount').textContent = stats.total_devices;
+            document.getElementById('connectionCount').textContent = stats.total_connections;
+            document.getElementById('vlanCount').textContent = stats.total_vlans;
+            document.getElementById('onlineCount').textContent = stats.online_devices;
+        }
+
+        function updateVisualization() {
+            if (!topologyData) return;
+
+            // Clear existing elements
+            g.selectAll('*').remove();
+
+            const nodes = topologyData.nodes.map(d => ({...d}));
+            const links = topologyData.edges.map(d => ({...d}));
+
+            // Create links with enhanced styling
+            link = g.append('g')
+                .attr('class', 'links')
+                .selectAll('line')
+                .data(links)
+                .enter().append('line')
+                .attr('class', 'link')
+                .attr('stroke', d => {
+                    if (d.type === 'uplink') return '#dc3545';
+                    if (d.type === 'trunk') return '#28a745';
+                    return '#17a2b8';
+                })
+                .attr('stroke-width', d => {
+                    if (d.type === 'trunk') return 3;
+                    if (d.type === 'uplink') return 2.5;
+                    return 2;
+                })
+                .attr('stroke-opacity', 0.8);
+
+            // Create nodes with enhanced 30px icons
+            node = g.append('g')
+                .attr('class', 'nodes')
+                .selectAll('g')
+                .data(nodes)
+                .enter().append('g')
+                .attr('class', 'node')
+                .on('mouseover', showTooltip)
+                .on('mouseout', hideTooltip)
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+
+            // Add enhanced circles (30px radius)
+            console.log('🎯 ENHANCED: Creating 30px device icons (was 20px)');
+            node.append('circle')
+                .attr('r', d => d.size || 30)
+                .attr('fill', d => deviceColors[d.group] || deviceColors.unknown)
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 3);
+
+            // Add Font Awesome icons with enhanced sizing
+            node.append('text')
+                .attr('class', 'device-icon')
+                .attr('text-anchor', 'middle')
+                .attr('dominant-baseline', 'central')
+                .attr('font-family', 'Font Awesome 6 Free')
+                .attr('font-weight', '900')
+                .attr('font-size', d => (d.size || 30) * 0.75)
+                .attr('fill', '#fff')
+                .text(d => deviceIcons[d.group] || deviceIcons.unknown);
+
+            // Create enhanced node labels
+            nodeLabels = g.append('g')
+                .attr('class', 'node-labels')
+                .selectAll('text')
+                .data(nodes)
+                .enter().append('text')
+                .attr('class', 'node-label')
+                .text(d => d.label)
+                .attr('dy', d => (d.size || 30) + 25);
+
+            // Create VLAN connection labels (enhanced feature)
+            linkLabels = g.append('g')
+                .attr('class', 'link-labels')
+                .selectAll('text')
+                .data(links.filter(d => d.vlanName))
+                .enter().append('text')
+                .attr('class', 'link-label')
+                .text(d => d.vlanName)
+                .attr('font-size', '11px')
+                .attr('fill', 'rgb(var(--text-secondary))')
+                .attr('text-anchor', 'middle')
+                .attr('pointer-events', 'none');
+
+            // Initialize simulation based on layout
+            updateSimulation(nodes, links);
+        }
+
+        function updateSimulation(nodes, links) {
+            const width = window.innerWidth - 280;
+            const height = window.innerHeight - 120;
+
+            if (simulation) {
+                simulation.stop();
+            }
+
+            if (currentLayout === 'hierarchical') {
+                // QSR Hierarchical Layout: Internet → FortiGate → Switch → AP/Clients
+                simulation = d3.forceSimulation(nodes)
+                    .force('link', d3.forceLink(links).id(d => d.id).distance(120))
+                    .force('charge', d3.forceManyBody().strength(-400))
+                    .force('center', d3.forceCenter(width / 2, height / 2))
+                    .force('y', d3.forceY(d => {
+                        if (d.group === 'internet') return height * 0.2;
+                        if (d.group === 'fortigate') return height * 0.35;
+                        if (d.group === 'switch') return height * 0.5;
+                        if (d.group === 'wireless') return height * 0.65;
+                        if (d.group === 'client') return height * 0.8;
+                        return height * 0.5;
+                    }).strength(0.5))
+                    .force('collision', d3.forceCollide().radius(d => (d.size || 30) + 10));
+            } else if (currentLayout === 'radial') {
+                simulation = d3.forceSimulation(nodes)
+                    .force('link', d3.forceLink(links).id(d => d.id).distance(100))
+                    .force('charge', d3.forceManyBody().strength(-300))
+                    .force('center', d3.forceCenter(width / 2, height / 2))
+                    .force('radial', d3.forceRadial(d => {
+                        if (d.group === 'internet' || d.group === 'fortigate') return 50;
+                        if (d.group === 'switch') return 120;
+                        if (d.group === 'wireless') return 180;
+                        return 250;
+                    }, width / 2, height / 2));
+            } else {
+                simulation = d3.forceSimulation(nodes)
+                    .force('link', d3.forceLink(links).id(d => d.id).distance(100))
+                    .force('charge', d3.forceManyBody().strength(-300))
+                    .force('center', d3.forceCenter(width / 2, height / 2))
+                    .force('collision', d3.forceCollide().radius(d => (d.size || 30) + 8));
+            }
+
+            simulation.on('tick', ticked);
+        }
+
+        function ticked() {
+            link
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+
+            node
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+
+            nodeLabels
+                .attr('x', d => d.x)
+                .attr('y', d => d.y + (d.size || 30) + 25);
+
+            linkLabels
+                .attr('x', d => (d.source.x + d.target.x) / 2)
+                .attr('y', d => (d.source.y + d.target.y) / 2);
+        }
+
+        function showTooltip(event, d) {
+            const tooltip = document.getElementById('tooltip');
+            
+            let tooltipContent = `
+                <div class="tooltip-section">
+                    <div class="tooltip-label">Device Name:</div>
+                    <div class="tooltip-value">${d.label}</div>
+                </div>
+                
+                <div class="tooltip-section">
+                    <div class="tooltip-label">Type:</div>
+                    <div class="tooltip-value">${getDeviceTypeName(d.group)}</div>
+                </div>
+                
+                <div class="tooltip-section">
+                    <div class="tooltip-label">Status:</div>
+                    <div class="tooltip-value" style="color: #28a745;">${d.status || 'Unknown'}</div>
+                </div>
+            `;
+
+            if (d.ip) {
+                tooltipContent += `
+                    <div class="tooltip-section">
+                        <div class="tooltip-label">IP Address:</div>
+                        <div class="tooltip-value">${d.ip}</div>
+                    </div>
+                `;
+            }
+
+            if (d.mac) {
+                tooltipContent += `
+                    <div class="tooltip-section">
+                        <div class="tooltip-label">MAC Address:</div>
+                        <div class="tooltip-value">${d.mac}</div>
+                    </div>
+                `;
+            }
+
+            if (d.vendor) {
+                tooltipContent += `
+                    <div class="tooltip-section">
+                        <div class="tooltip-label">Vendor:</div>
+                        <div class="tooltip-value">${d.vendor}</div>
+                    </div>
+                `;
+            }
+
+            if (d.model) {
+                tooltipContent += `
+                    <div class="tooltip-section">
+                        <div class="tooltip-label">Model:</div>
+                        <div class="tooltip-value">${d.model}</div>
+                    </div>
+                `;
+            }
+
+            if (d.firmware) {
+                tooltipContent += `
+                    <div class="tooltip-section">
+                        <div class="tooltip-label">Firmware:</div>
+                        <div class="tooltip-value">${d.firmware}</div>
+                    </div>
+                `;
+            }
+
+            // Enhanced VLAN information display
+            if (d.vlans && d.vlans.length > 0) {
+                tooltipContent += `
+                    <div class="vlan-info">
+                        <div class="tooltip-label" style="margin-bottom: 6px;">VLAN Information:</div>
+                        ${d.vlans.map(vlan => 
+                            `<div class="vlan-item">• ${vlan.name} (VLAN ${vlan.id})</div>`
+                        ).join('')}
+                    </div>
+                `;
+            }
+
+            if (d.parent_device) {
+                tooltipContent += `
+                    <div class="tooltip-section">
+                        <div class="tooltip-label">Connected To:</div>
+                        <div class="tooltip-value">${d.parent_device}</div>
+                    </div>
+                `;
+            }
+
+            tooltip.innerHTML = tooltipContent;
+            tooltip.style.display = 'block';
+            tooltip.style.left = (event.pageX + 10) + 'px';
+            tooltip.style.top = (event.pageY - 10) + 'px';
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').style.display = 'none';
+        }
+
+        function getDeviceTypeName(group) {
+            const typeNames = {
+                'internet': 'Internet Gateway',
+                'fortigate': 'FortiGate Firewall',
+                'appliance': 'Meraki MX Appliance',
+                'switch': 'Meraki Switch',
+                'wireless': 'Meraki Wireless AP',
+                'fortiap': 'FortiAP Wireless',
+                'client': 'Client Device',
+                'unknown': 'Unknown Device'
+            };
+            return typeNames[group] || 'Unknown Device';
+        }
+
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const width = window.innerWidth - 280;
+            const height = window.innerHeight - 120;
+            
+            svg.attr('width', width).attr('height', height);
+            
+            if (simulation) {
+                simulation.force('center', d3.forceCenter(width / 2, height / 2));
+                simulation.alpha(0.3).restart();
+            }
+        });
+    </script>
+</body>
+</html>
